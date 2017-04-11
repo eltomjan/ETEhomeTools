@@ -141,6 +141,48 @@ public:
 		*ptr = 0;
 		return *this;
 	}
+	cString<21> num2str(long long number, int maxSize) {
+		// number size ns >= log 2^bits
+		// ns >= bits * log 2
+		bool negative = number < 0;
+		if(negative) {
+			number = -number;
+		}
+		int i=0;
+		cString<21> asciiNum = "                     ";
+		asciiNum[maxSize+1] = 0;
+		while(number && i < maxSize) {
+			i++;
+			asciiNum[maxSize-i+1] = (number % 10) + '0';
+			number /= 10;
+		}
+		if(maxSize - negative >= i) {
+			if(negative)
+				asciiNum[maxSize-i++] = '-';
+			if(maxSize-i+1)
+				asciiNum = asciiNum.substr(maxSize-i+1);
+			return asciiNum;
+		}
+		return "";
+	}
+	const cString& operator +=(int number) {
+		cString<21> &retVal = num2str(number, 11);
+		if(c_maxSize - m_size >= retVal.length() && retVal.length())
+			operator += (retVal);
+		return *this;
+	}
+	const cString& operator +=(long number) {
+		cString<21> &retVal = num2str(number, 11);
+		if(c_maxSize - m_size >= retVal.length() && retVal.length())
+			operator += (retVal);
+		return *this;
+	}
+	const cString& operator +=(long long number) {
+		cString<21> &retVal = num2str(number, 20);
+		if(c_maxSize - m_size >= retVal.length() && retVal.length())
+			operator += (retVal);
+		return *this;
+	}
 	template<unsigned short int T>
 	cString& operator +=(const cString<T>& src) { // "strcat"
 		unsigned short int remainingSize = c_maxSize - m_size;
