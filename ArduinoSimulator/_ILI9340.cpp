@@ -418,7 +418,7 @@ void _ILI9340::drawChar(int16_t x, int16_t y, unsigned char c,
 		}
 	}
 	char cd[3000],cd0[3000],*chr0=cd0,*chr=cd;
-	for(char j=0;j<height-1;j++) { // unxor data
+	for(char j=0;j<height;j++) { // unxor data
 		for(char i=0;i<width;i++) {
 			int mask=128, dato=dataBuf[j*width+i];
 			while(mask) {
