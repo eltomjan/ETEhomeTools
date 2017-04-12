@@ -1,8 +1,5 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-
-using namespace std;
+#include "cArrayPtr.h"
+#include "fntXorPacker.h"
 
 //===========================================================================
 // Params: GLCD.glc G 10x19 chars ATMout.h
@@ -12,8 +9,8 @@ int fntXorPacker(int argc, char *argv[])
 {
 	int argPos = 2;
     if(argc >= 5) {
-		bool xored = false, glcd = false;
-		if(!(xored = !strcmp(argv[argPos],"X")) && !(glcd = !strcmp(argv[argPos],"G")))
+		bool xored = false, glcd = false, ascii = false;
+		if(!(xored = !strcmp(argv[argPos],"X")) && !(glcd = !strcmp(argv[argPos],"G")) && !(ascii = !strcmp(argv[argPos],"A")))
 			return -1;
 		argPos++;
         ifstream cFile;
@@ -53,13 +50,10 @@ int fntXorPacker(int argc, char *argv[])
 			if(data) {
 				unsigned int zerosNo0 = 0, zerosNo1 = 0; // # of zeros before and after XOR
 				string src, xor;
-				unsigned char *fontBuf = NULL;
-				unsigned char *nzData = NULL;
-				fontBuf = new unsigned char[bufSize];
-				memset(fontBuf, 0, bufSize);
-				if(glcd) {
-					nzData = new unsigned char[bufSize];
-				}
+#define PREVIEW_SIZE 200
+				cArrHolder fontBuf(bufSize);
+				cArrHolder &nzData = *new cArrHolder(bufSize);
+				(*fontBuf).set2(0);
 				unsigned int rowBitmapSize = height * chars;
 				unsigned char *rowBitmap = NULL;
 				if(glcd) {
@@ -75,9 +69,10 @@ int fntXorPacker(int argc, char *argv[])
 					memset(colBitmap, 0, colBitmapSize);
 				}
 				unsigned char *transformBuf = new unsigned char[charBufSize*2];
-				unsigned char *bufPos = fontBuf;
+				cArrHolder bufPos(*fontBuf, bufSize);
 				unsigned int charPos = 0;
 				string allowed = "0123456789ABCDEFX,";
+				int bytesRead = 0;
 				do {
 					if(line.length()) {
 						pos = 0;
@@ -97,25 +92,32 @@ int fntXorPacker(int argc, char *argv[])
 							if(line.length() > pos) pos++; else break;
 							if(hexPos == 17) {
 								read = false;
-								*bufPos++ = readByte;
+								hex = false;
+								bufPos.addChar(readByte);
+								bytesRead++;
 								readByte = 0;
 								charPos++;
 								pos++;
 							}
 						}
 						if(read) {
-							*bufPos++ = readByte;
+							bufPos.addChar(readByte);
+							bytesRead++;
 							charPos++;
 						}
 						if(glcd && charPos >= dataHeight) { // 1 char read
-							unsigned char *srcBuf = bufPos - charPos;
+							cArrHolder srcBuf(*bufPos, charBufSize);
+							(*srcBuf).moveWindow(-(long)charPos);
 							string oneRead = readGlcChar(srcBuf, width, height);
 							bufPos += charBufSize - charPos;
-							transformChar(oneRead, bufPos, width, dataWidth, charBufSize, height, zerosNo0);
-							xorChar(srcBuf, dataWidth, charBufSize, height, zerosNo1);
+							cArrHolder srcBuf2(*bufPos, charBufSize);
+							transformChar(oneRead, srcBuf2, width, dataWidth, charBufSize, height, zerosNo0);
+							cArrHolder srcBuf3(*bufPos, charBufSize);
+							(*srcBuf3).moveWindow(-(long)charBufSize);
+							xorChar(srcBuf3, dataWidth, charBufSize, height, zerosNo1);
 							src += oneRead;
 							charPos = 0;
-							xor += readLinearChar(srcBuf, width, height);
+							xor += readLinearChar(srcBuf3, width, height);
 						}
 					}
 				} while(getline(cFile, line));
@@ -123,33 +125,43 @@ int fntXorPacker(int argc, char *argv[])
 				unsigned int colByte;
 				unsigned char *colBitmapPtr = colBitmap;
 				unsigned char *rowBitmapPtr = rowBitmap;
-				unsigned char *nzDataPtr = nzData;
+				cArrHolder &nzDataPtr = *new cArrHolder(*nzData, bufSize);
 				if(xored) {
-					nzDataPtr = bufPos;
-					bufPos = fontBuf;
-					colBitmapSize = ((*bufPos++) << 8);
-					colBitmapSize += (*bufPos++);
-					chars = *bufPos++;
-					dataWidth = *bufPos++;
-					height = *bufPos++;
+					long dataSize = (*bufPos).getRelPos();
+					(*bufPos).setPos(0l);
+					colBitmapSize = ((**bufPos) << 8);
+					++bufPos;
+					colBitmapSize += (**bufPos); ++bufPos;
+					chars = **bufPos; ++bufPos;
+					dataWidth = **bufPos; ++bufPos;
+					height = **bufPos; ++bufPos;
 					rowBitmapSize = height * chars; // 89
 					rowBitmapSize = (rowBitmapSize / 8) + !!(rowBitmapSize & 7);
-					rowBitmap = bufPos;
-					rowBitmapPtr = colBitmap = bufPos+rowBitmapSize;
+					rowBitmap = (*bufPos).getPos();
+					rowBitmapPtr = colBitmap = rowBitmap+rowBitmapSize;
 					colBitmapPtr = colBitmap + colBitmapSize;
-					nzData = colBitmapPtr;
-				} else if(glcd) {
-					bufPos = fontBuf;
+//					(*nzData).RelRef();
+//					new (&nzData)cArrHolder(colBitmapPtr, (long)(dataSize - rowBitmapSize - colBitmapSize));
+//					(*nzDataPtr).move2cArray(colBitmapPtr, (long)(dataSize - rowBitmapSize - colBitmapSize));
+//					memcpy((*nzData).getPos(), colBitmapPtr, dataSize - rowBitmapSize - colBitmapSize);
+					(*nzData).RelRef();
+					(*nzDataPtr).RelRef();
+					nzData = *new cArrHolder(colBitmapPtr, (long)(dataSize - rowBitmapSize - colBitmapSize));
+					(*nzData).AddRef();
+					nzDataPtr = *new cArrHolder(*nzData, dataSize - rowBitmapSize - colBitmapSize);
+					(*nzDataPtr).setPos(dataSize);
+				} else if(glcd) { // glcd collecting info
+					cArrHolder bufPos(*fontBuf, bufSize);
 					for(int i=0;i<chars;i++) {
 						for(unsigned int r=0;r<height;r++) { // collect row bitmap (zero or not zero)
 							colByte = 0;
 							for(unsigned int c=0;c<dataWidth;c++) {
 								colByte <<= 1;
-								if(*bufPos) {
-									*nzDataPtr++ = *bufPos;
+								if(**bufPos) {
+									(*nzDataPtr).addChar(**bufPos);
 									colByte++;
 								}
-								bufPos++;
+								++bufPos;
 							}
 							if(colByte) {
 								unsigned char shift = colBMbit+9-dataWidth; // shift to 15-th bit
@@ -169,7 +181,7 @@ int fntXorPacker(int argc, char *argv[])
 							}
 						}
 					}
-				}
+				} // glcd collecting info
 //				delete[] fontBuf;
 				string output = "= {"; // start data block
 				output += "0x";
@@ -212,7 +224,7 @@ int fntXorPacker(int argc, char *argv[])
 				string check;
 				ptr = rowBitmapPtr;
 				rowBMmask = 128;
-				unsigned char *ptrNz = nzData;
+				cArrHolder ptrNz(*nzData, bufSize);
 				unsigned char *ptrCB = colBitmap;
 				colBMbit = 128;
 				ptr = rowBitmap;
@@ -224,8 +236,8 @@ int fntXorPacker(int argc, char *argv[])
 						for(unsigned int c=0;c<dataWidth;c++) {
 							if(*ptrCB & colBMbit) {
 								for(unsigned char m=128;m && maxW--;m>>=1)
-									check += (*ptrNz&m)?'*':' ';
-								ptrNz++;
+									check += ((**ptrNz)&m)?'*':' ';
+								++ptrNz;
 							} else {
 								for(unsigned int c=0;c<8 && maxW--;c++)
 									check += ' ';
@@ -246,10 +258,14 @@ int fntXorPacker(int argc, char *argv[])
 							check += '-';
 						check += "\n";
 						if(xored) {
-							transformChar(check.substr(xoredPos), transformBuf + charBufSize, width, dataWidth, charBufSize, height, zerosNo0);
+							cArrHolder nextChar(transformBuf, charBufSize*2);
+							(*nextChar).AddRef(); // keep parent alive
+							(*nextChar).shiftPos(charBufSize);
+							transformChar(check.substr(xoredPos), nextChar, width, dataWidth, charBufSize, height, zerosNo0);
 							xorCharRev(transformBuf, dataWidth, charBufSize, height, zerosNo1);
 							xoredPos = check.length();
-							src += readLinearChar(transformBuf, width, height);
+							(*nextChar).shiftPos(-(long)charBufSize);
+							src += readLinearChar(nextChar, width, height);
 						}
 						charRows = height;
 					}
@@ -264,15 +280,16 @@ int fntXorPacker(int argc, char *argv[])
 				}
 				// End of check
 				output += "\n//Non-zero font data\n";
-				ptr = nzData;
-				while(ptr < nzDataPtr) {
+				cArrHolder nzDataRead(*nzData, (*nzDataPtr).getRelPos());
+				while(!(*nzDataRead).isInvalid()) {
 					output += "0x";
-					output += allowed[(*ptr) >> 4];
-					output += allowed[(*ptr++) & 15];
-					if(ptr < nzDataPtr) output += ",";
+					output += allowed[(**nzDataRead) >> 4];
+					output += allowed[(**nzDataRead) & 15];
+					++nzDataRead;
+					if((*nzDataRead).isInvalid()) break;
+					else output += ",";
 				}
 				output += "\n};\n";
-//				delete[] nzData;
 /*				// Save GLCD as ASCII
 				if(argc > argPos) {
 					ofstream o(argv[argPos++]);
@@ -294,8 +311,8 @@ int fntXorPacker(int argc, char *argv[])
 					orig = (orig/8) + !!(orig&7);
 					o << "// Zero's no:" << zerosNo1 << "-" << zerosNo0 << "=" << zerosNo1-zerosNo0 << 
 						" tabs size 5+" << (rowBitmapPtr-rowBitmap) << "+" << colBitmapSize << "=" << 5+(rowBitmapPtr-rowBitmap)+colBitmapSize <<
-						" data:" << (nzDataPtr-nzData) << " of b->B " << orig << " => " << 
-						(int)(5+(rowBitmapPtr-rowBitmap)+colBitmapSize+(nzDataPtr-nzData))*100 / orig - 100 << "%" << endl;
+						" data:" << (*nzDataPtr).getRelPos() << " of b->B " << orig << " => " << 
+						(int)(5+(rowBitmapPtr-rowBitmap)+colBitmapSize+(*nzDataPtr).getRelPos())*100 / orig - 100 << "%" << endl;
 					o << output;
 					o << "/*" << endl;
 					size_t startLine = 0, endLine;
@@ -303,7 +320,7 @@ int fntXorPacker(int argc, char *argv[])
 					unsigned char *ptrCB = colBitmap;
 					colBMbit = 128;
 					ptr = rowBitmap;
-					bufPos = nzData;
+					cArrHolder bufPos(*nzData, bufSize);
 					int rows = height;
 					while((endLine = src.find('\n', startLine+1)) != string::npos) {
 						o << src.substr(startLine, endLine - startLine);
@@ -325,7 +342,11 @@ int fntXorPacker(int argc, char *argv[])
 								string bin, hexVals;
 								unsigned char colsMask = 1 << (dataWidth-1);
 								while(cols) {
-									unsigned int val = (cols & colsMask)?(*bufPos++):0;
+									unsigned int val = 0;
+									if(cols & colsMask) {
+										val = **bufPos;
+										++bufPos;
+									}
 									if(val) {
 										hexVals += " 0x";
 										hexVals += allowed[val >> 4];
@@ -363,11 +384,11 @@ int fntXorPacker(int argc, char *argv[])
 				} else
 					cout << output;
 				if(!xored) {
-					delete[] nzData;
 					delete[] rowBitmap;
 					delete[] colBitmap;
 				}
-				delete[] fontBuf;
+				delete &nzDataPtr;
+				delete &nzData;
 				delete[] transformBuf;
 			}
         }
@@ -377,7 +398,7 @@ int fntXorPacker(int argc, char *argv[])
 //===========================================================================
 // Convert GLCD bitmap data to ASCII
 //===========================================================================
-string readGlcChar(unsigned char *srcBuf, unsigned int dataWidth, unsigned int height) {
+string readGlcChar(cArrHolder &srcBuf, unsigned int dataWidth, unsigned int height) {
 	string picture;
 	unsigned char mask = 1;
 	unsigned int bytesRead = 0;
@@ -387,13 +408,13 @@ string readGlcChar(unsigned char *srcBuf, unsigned int dataWidth, unsigned int h
 			y++;
 		}
 		for(unsigned int x=0;x<dataWidth;x++) {
-//			if(*(srcBuf+x+y*dataWidth) & mask)
-			if(*srcBuf++ & mask) picture += '*'; else picture += ' ';
+			if(**srcBuf & mask) picture += '*'; else picture += ' ';
+			++srcBuf;
 		}
 		picture += "|\n";
 		mask <<= 1;
-		if(mask) srcBuf -= dataWidth;
-		else bytesRead += dataWidth;
+		if(mask) { (*srcBuf).shiftPos(-(long)dataWidth);
+		} else bytesRead += dataWidth;
 	}
 	for(unsigned int x=0;x<dataWidth;x++)
 		picture += "-";
@@ -404,13 +425,13 @@ string readGlcChar(unsigned char *srcBuf, unsigned int dataWidth, unsigned int h
 //===========================================================================
 // Convert ASCII string to common BMP font data
 //===========================================================================
-void transformChar(string src, unsigned char *destBuf, unsigned int width, unsigned int dataWidth, unsigned int size, unsigned int height, unsigned int& zerosNo0) {
+void transformChar(string src, cArrHolder& destBuf, unsigned int width, unsigned int dataWidth, unsigned int size, unsigned int height, unsigned int& zerosNo0) {
 	unsigned char mask = 128;
 	unsigned char byte = 0;
 	src = src.substr(0, src.length()-2);
 	src = src.substr(0, src.find(src[src.length()-1]));
 	const char *pos = src.c_str();
-	unsigned char *bufPos=destBuf;
+	cArrHolder bufPos(*destBuf, size);
 	unsigned int bufWritten = 0;
 	bool cycle;
 #ifdef Testing
@@ -427,7 +448,7 @@ void transformChar(string src, unsigned char *destBuf, unsigned int width, unsig
 			mask >>= 1;
 		}
 		if(cycle || ((*pos == '|') && (dataWidth*8 > width))) {
-			*bufPos++ = byte;
+			(*bufPos).addChar(byte);
 #ifdef Testing
 			mask = 128;
 			while(mask) {
@@ -451,25 +472,27 @@ void transformChar(string src, unsigned char *destBuf, unsigned int width, unsig
 #ifdef Testing
 	cout << check;
 #endif
-	memcpy(destBuf - size, destBuf, size);
-	bufPos = destBuf - 1;
-	unsigned char *srcBuf = destBuf - size + dataWidth - 1;
+	(*destBuf).copyData(-(long)size, 0, size);
+	cArrHolder srcBuf(*destBuf, size);
+	(*srcBuf).moveWindow(-(long)size);
 	for(unsigned int r=0;r<height;r++)
-		for(unsigned int c=0;c<dataWidth;c++)
-			if(!*(srcBuf+c+(r*dataWidth))) zerosNo0++;
+		for(unsigned int c=0;c<dataWidth;c++) {
+			(*srcBuf).setPos(c+(r*dataWidth));
+			if(!**srcBuf) zerosNo0++;
+		}
 }
 
 //===========================================================================
 // XOR data
 //===========================================================================
-void xorChar(unsigned char *destBuf, unsigned int dataWidth, unsigned int size, unsigned int height, unsigned int& zerosNo1) {
+void xorChar(cArrHolder& destBuf, unsigned int dataWidth, unsigned int size, unsigned int height, unsigned int& zerosNo1) {
 	// XOR from bottom to 2-nd line
-	unsigned char *bufPos = destBuf + size - 1;
-	unsigned char *srcBuf = destBuf + dataWidth;
-	if(dataWidth == 1) {
-		srcBuf--;
-		bufPos++;
-	}
+	cArrHolder bufPos(*destBuf, size - dataWidth); // -1 row
+	(*bufPos).moveWindow(dataWidth); // 1 row down
+	(*bufPos).setPos((*bufPos).end()); // end
+	cArrHolder srcBuf(*destBuf, size - dataWidth); // -1 row
+	(*srcBuf).setPos((*srcBuf).end()); // end -1
+	
 #ifdef Testing
 	string check;
 	unsigned char mask = 128;
@@ -485,9 +508,10 @@ void xorChar(unsigned char *destBuf, unsigned int dataWidth, unsigned int size, 
 	}
 	cout << check;
 #endif
-	while(--bufPos > srcBuf) {
-		*bufPos ^= *(bufPos-dataWidth);
-	}
+	do {
+		(*bufPos).setData(**bufPos ^ **srcBuf);
+		--bufPos; --srcBuf;
+	} while(!(*srcBuf).isInvalid());
 #ifdef Testing
 	for(int r=0;r<height;r++) {
 		for(int c=0;c<dataWidth;c++) {
@@ -501,9 +525,12 @@ void xorChar(unsigned char *destBuf, unsigned int dataWidth, unsigned int size, 
 	}
 	cout << check;
 #endif
+	cArrHolder zerosBuf(*destBuf, size);
 	for(unsigned int r=0;r<height;r++)
-		for(unsigned int c=0;c<dataWidth;c++)
-			if(!*(srcBuf+c+(r*dataWidth))) zerosNo1++;
+		for(unsigned int c=0;c<dataWidth;c++) {
+			(*zerosBuf).setPos(c+(r*dataWidth));
+			if(!**zerosBuf) zerosNo1++;
+		}
 }
 
 //===========================================================================
@@ -524,22 +551,22 @@ void xorCharRev(unsigned char *destBuf, unsigned int dataWidth, unsigned int siz
 //===========================================================================
 // Read common font data 2 string
 //===========================================================================
-string readLinearChar(unsigned char *srcBuf, unsigned int width, unsigned int height) {
+string readLinearChar(cArrHolder& srcBuf, unsigned int width, unsigned int height) {
 	string picture;
 	unsigned char mask = 128;
 	unsigned int bytesRead = 0;
 	for(unsigned int y=0;y<height;y++) {
 		for(unsigned int x=0;x<width;x++) {
-			if(*srcBuf & mask) picture += '*'; else picture += ' ';
+			if(**srcBuf & mask) picture += '*'; else picture += ' ';
 			mask >>= 1;
 			if(!mask) {
 				mask = 128;
-				srcBuf++;
+				++srcBuf;
 				bytesRead++;
 			}
 		}
 		if(mask && ((width < 8) || (width & 7)))
-			srcBuf++;
+			++srcBuf;
 		mask = 128;
 		bytesRead++;
 		picture += "|\n";
