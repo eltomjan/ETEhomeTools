@@ -10,6 +10,7 @@ public:
 		m_refCnt = 0;
 		m_parent = NULL;
 		m_begin = m_pos = m_end = NULL;
+		m_manageData = true;
 	}
 	cArray(long c_size) {
 		new (this) cArray();
@@ -35,14 +36,9 @@ public:
 		m_data = parent.m_data;
 		AddRef();
 	}
-	void move2cArray(unsigned char *parent, long c_size) {
-		m_pos = parent;
-		m_begin = parent;
-		m_end = m_pos + c_size - 1;
-		m_data = (unsigned char(*)[PREVIEW_SIZE])parent;
-	}
-	cArray(unsigned char *parent, long c_size) {
+	cArray(unsigned char *parent, long c_size, bool manageData = false) {
 		new (this) cArray();
+		m_manageData = manageData;
 		m_parent = NULL;
 		move2cArray(parent, c_size);
 		AddRef();
@@ -203,19 +199,27 @@ public:
 	}
 
 protected:
+	void move2cArray(unsigned char *parent, long c_size) {
+		m_pos = parent;
+		m_begin = parent;
+		m_end = m_pos + c_size - 1;
+		m_data = (unsigned char(*)[PREVIEW_SIZE])parent;
+	}
+
 	cArray *m_parent;
 	unsigned char *m_pos;
 	unsigned char *m_begin;
 	unsigned char *m_end;
 	unsigned char (*m_data)[PREVIEW_SIZE];
 	~cArray() {
-		if(m_data && !m_parent) {
+		if((m_data && !m_parent) && m_manageData) {
 			delete[] m_data;
 			m_data = NULL;
 		}
 	};
 private:
 	int m_refCnt;
+	bool m_manageData;
 };
 
 class cArrHolder {
@@ -230,8 +234,8 @@ public:
 	cArrHolder(const cArray& parent, long c_size) {
 		m_ptr = new cArray(parent, c_size);
 	}
-	cArrHolder(unsigned char* binArray, long size) {
-		m_ptr = new cArray(binArray, size);
+	cArrHolder(unsigned char* binArray, long size, bool manageData = false) {
+		m_ptr = new cArray(binArray, size, manageData);
 	}
 	~cArrHolder() {
 		m_ptr->RelRef();
