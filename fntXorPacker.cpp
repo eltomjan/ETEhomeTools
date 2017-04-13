@@ -35,7 +35,7 @@ int fntXorPacker(int argc, char *argv[])
 			if(charBufSize < dataWidth * dataHeight) charBufSize = width * dataHeight;
 			bufSize = (chars + 1) * charBufSize;
             string line;
-			unsigned int pos = 0;
+			size_t pos = 0;
 			bool data = false;
 			while(!ascii && getline(cFile, line)) if(line.length()) { // skip inital preprocessor cmds and line comments
 				pos = 0;
@@ -71,7 +71,7 @@ int fntXorPacker(int argc, char *argv[])
 				}
 				unsigned char *transformBuf = new unsigned char[charBufSize*2];
 				cArrHolder bufPos(*fontBuf, bufSize);
-				unsigned int charPos = 0;
+				size_t charPos = 0;
 				string allowed = "0123456789ABCDEFX,";
 				int bytesRead = 0;
 				do { // process file
