@@ -12,7 +12,7 @@ public:
 		m_begin = m_pos = m_end = NULL;
 		m_manageData = true;
 	}
-	cArray(long c_size) {
+	const cArray(const long c_size) {
 		new (this) cArray();
 		if(c_size >= 0) {
 			m_data = (unsigned char(*)[PREVIEW_SIZE])new unsigned char[c_size];
@@ -23,7 +23,7 @@ public:
 //			for(int i=0;i<c_size;i++) (*m_data)[i] = i;
 		}
 	}
-	cArray(const cArray& parent, long c_size) {
+	const cArray(const cArray& parent, const long c_size) {
 		new (this) cArray();
 		m_parent = const_cast<cArray*>(&parent);
 		m_pos = parent.m_pos;
@@ -36,17 +36,17 @@ public:
 		m_data = parent.m_data;
 		AddRef();
 	}
-	cArray(unsigned char *parent, long c_size, bool manageData = false) {
+	const cArray(const unsigned char *parent, const long c_size, const bool manageData = false) {
 		new (this) cArray();
 		m_manageData = manageData;
 		m_parent = NULL;
 		move2cArray(parent, c_size);
 		AddRef();
 	}
-	int AddRef() {
+	const int AddRef() {
 		return m_refCnt++;
 	}
-	int RelRef ()
+	const int RelRef ()
 	{ 
 		if (--m_refCnt == 0) {
 			if(!m_parent) {
@@ -65,7 +65,7 @@ public:
 		}
 		return m_refCnt;
 	}
-	void set2(unsigned char val, bool rest = false) {
+	void set2(const unsigned char val, const bool rest = false) {
 		if(rest) {
 			if(m_end >= m_pos)
 				memset(m_pos, val, m_end - m_pos + 1);
@@ -74,14 +74,14 @@ public:
 				memset(m_begin, val, m_end - m_begin + 1);
 		}
 	}
-	bool addChar(unsigned char c) {
+	const bool addChar(const unsigned char c) {
 		if(m_pos <= m_end) {
 			*m_pos++ = c;
 			return true;
 		}
 		return false;
 	}
-	bool shiftPos(long number) {
+	const bool shiftPos(const long number) {
 		if(m_pos + number > m_end) {
 #ifdef TESTING
 			printf("cArray move past end !\n");
@@ -99,10 +99,10 @@ public:
 			return true;
 		}
 	}
-	bool setPos(unsigned char *pos) {
+	const bool setPos(const unsigned char *pos) {
 		int bug;
 		if(!(bug = checkPos(pos))) {
-			m_pos = pos;
+			m_pos = const_cast<unsigned char *>(pos);
 			return true;
 		}
 #ifdef TESTING
@@ -110,7 +110,7 @@ public:
 #endif
 		return false;
 	}
-	bool setPos(long pos) {
+	const bool setPos(const long pos) {
 		int bug;
 		if(!(bug = checkPos(m_begin + pos))) {
 			m_pos = m_begin + pos;
@@ -121,17 +121,17 @@ public:
 #endif
 		return false;
 	}
-	const int checkPos(unsigned char *pos) {
+	const int checkPos(const unsigned char *pos) const {
 		if(m_pos < m_begin) {
-			m_pos = m_begin - 1;
+			const_cast<unsigned char *>(m_pos) = m_begin - 1; // ev. fix, should report error when it was less
 			return -1;
 		} else if(m_pos > m_end) {
-			m_pos = m_end + 1;
+			const_cast<unsigned char *>(m_pos) = m_end + 1; // ev. fix, should report error when it was more
 			return -1;
 		}
 		return 0;
 	}
-	const unsigned char operator * () {
+	const unsigned char operator * () const {
 		int bug;
 		if(!(bug = checkPos(m_pos))) {
 			return *m_pos;
@@ -142,7 +142,7 @@ public:
 			throw "cArray read out of array !\n";
 		}
 	}
-	bool copyData(long shiftDest, long shiftSrc, unsigned int size) {
+	const bool copyData(const long shiftDest, const long shiftSrc, const unsigned int size) {
 		int bug;
 		unsigned char *src = m_pos + shiftSrc, *dest = m_pos + shiftDest;
 		if(!(bug = checkPos(src)))
@@ -158,10 +158,10 @@ public:
 		throw "cArray copyData out of array !\n";
 		return false;
 	}
-	unsigned char *getPos() {
+	const unsigned char *getPos() const {
 		return m_pos;
 	}
-	bool moveWindow(long shift) {
+	const bool moveWindow(const long shift) {
 		int bug;
 		unsigned char *begin = m_begin + shift, *end = m_end + shift;
 		if(!(bug = m_parent->checkPos(begin)))
@@ -177,7 +177,7 @@ public:
 		throw "cArray moveWindow out of parent !\n";
 		return false;
 	}
-	bool setData(unsigned char char2Bset) {
+	const bool setData(const unsigned char char2Bset) {
 		int bug;
 		if(!(bug = checkPos(m_pos))) {
 			*m_pos = char2Bset;
@@ -188,10 +188,10 @@ public:
 #endif
 		throw "cArray setData out of array !\n";
 	}
-	int isInvalid() {
+	const int isInvalid() const {
 		return checkPos(m_pos);
 	}
-	unsigned char *end() {
+	const unsigned char *end() const {
 		return m_end;
 	}
 	const long getRelPos() const {
@@ -199,9 +199,9 @@ public:
 	}
 
 protected:
-	void move2cArray(unsigned char *parent, long c_size) {
-		m_pos = parent;
-		m_begin = parent;
+	void move2cArray(const unsigned char *parent, const long c_size) {
+		m_pos = const_cast<unsigned char *>(parent);
+		m_begin = const_cast<unsigned char *>(parent);
 		m_end = m_pos + c_size - 1;
 		m_data = (unsigned char(*)[PREVIEW_SIZE])parent;
 	}
@@ -227,14 +227,14 @@ public:
 	cArrHolder() {
 		m_ptr = NULL;
 	}
-	cArrHolder(long size) {
+	cArrHolder(const long size) {
 		new (this) cArrHolder();
 		m_ptr = new cArray(size);
 	}
-	cArrHolder(const cArray& parent, long c_size) {
+	cArrHolder(const cArray& parent, const long c_size) {
 		m_ptr = new cArray(parent, c_size);
 	}
-	cArrHolder(unsigned char* binArray, long size, bool manageData = false) {
+	cArrHolder(const unsigned char* binArray, const long size, const bool manageData = false) {
 		m_ptr = new cArray(binArray, size, manageData);
 	}
 	~cArrHolder() {
@@ -248,16 +248,16 @@ public:
 #endif
 		return *m_ptr;
 	}
-	bool addChar(unsigned char c) { return m_ptr->addChar(c); }
-	cArrHolder& operator += (long number) {
+	const bool addChar(const unsigned char c) { return m_ptr->addChar(c); }
+	const cArrHolder& operator += (const long number) const {
 		m_ptr->shiftPos(number);
 		return *this;
 	}
-	cArray& operator ++() const {
+	const cArray& operator ++() const { // boundary check should be there too - max. 1 past end
 		m_ptr->setPos(m_ptr->getPos() + 1);
 		return *m_ptr;
 	}
-	cArray& operator --() const {
+	const cArray& operator --() const { // boundary check should be there too - min. 1 before begin
 		m_ptr->setPos(m_ptr->getPos() - 1);
 		return *m_ptr;
 	}

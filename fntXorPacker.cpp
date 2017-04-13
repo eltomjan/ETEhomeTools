@@ -160,7 +160,7 @@ int fntXorPacker(int argc, char *argv[])
 					height = **bufPos; ++bufPos;
 					rowBitmapSize = height * chars; // 89
 					rowBitmapSize = (rowBitmapSize / 8) + !!(rowBitmapSize & 7);
-					rowBitmap = (*bufPos).getPos();
+					rowBitmap = const_cast<unsigned char *>((*bufPos).getPos()); // bad & dirty ;-)
 					rowBitmapPtr = colBitmap = rowBitmap+rowBitmapSize;
 					colBitmapPtr = colBitmap + colBitmapSize;
 					(*nzData).RelRef();
