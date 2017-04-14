@@ -59,8 +59,8 @@ int fntXorPacker(int argc, char *argv[])
 				unsigned char *rowBitmap = NULL;
 				if(glcd || ascii) {
 					rowBitmapSize = (rowBitmapSize / 8) + !!(rowBitmapSize & 7);
-					rowBitmap = new unsigned char[rowBitmapSize];
-					memset(rowBitmap, 0, rowBitmapSize);
+					rowBitmap = new unsigned char[rowBitmapSize+1];
+					memset(rowBitmap, 0, rowBitmapSize+1);
 				}
 				unsigned int colBitmapSize = height * dataWidth * chars;
 				unsigned char *colBitmap = NULL;
@@ -122,14 +122,18 @@ int fntXorPacker(int argc, char *argv[])
 								cArrHolder srcBuf(*bufPos, charBufSize);
 								(*srcBuf).moveWindow(-(long)charPos);
 								oneRead = readGlcChar(srcBuf, width, height);
-								bufPos += charBufSize - charPos;
 							} else {
 								oneRead += "|\n";
 								oneRead += line; // char delimiter and new line will be removed during transformation
 								oneRead += "\n";
-								(*bufPos).shiftPos(charBufSize);
 							}
-							cArrHolder srcBuf2(*bufPos, charBufSize);
+							cArrHolder srcBuf2(*bufPos, charBufSize*2);
+							if(ascii) {
+								(*bufPos).shiftPos(charBufSize);
+							} else {
+								bufPos += charBufSize - charPos;
+							}
+							(*srcBuf2).shiftPos(charBufSize);
 							transformChar(oneRead, srcBuf2, width, dataWidth, charBufSize, height, zerosNo0);
 							cArrHolder srcBuf3(*bufPos, charBufSize);
 							(*srcBuf3).moveWindow(-(long)charBufSize);
@@ -199,6 +203,8 @@ int fntXorPacker(int argc, char *argv[])
 							}
 						}
 					}
+					if(*colBitmapPtr) colBitmapPtr++;
+					colBitmapSize = (unsigned int)(colBitmapPtr - colBitmap);
 				} // glcd collecting info
 //				delete[] fontBuf;
 				string output = "= {"; // start data block
@@ -492,7 +498,6 @@ void transformChar(string src, cArrHolder& destBuf, unsigned int width, unsigned
 #endif
 	(*destBuf).copyData(-(long)size, 0, size);
 	cArrHolder srcBuf(*destBuf, size);
-	(*srcBuf).moveWindow(-(long)size);
 	for(unsigned int r=0;r<height;r++)
 		for(unsigned int c=0;c<dataWidth;c++) {
 			(*srcBuf).setPos(c+(r*dataWidth));
@@ -531,6 +536,39 @@ void xorChar(cArrHolder& destBuf, unsigned int dataWidth, unsigned int size, uns
 		(*bufPos).setData(**bufPos ^ **srcBuf);
 		--bufPos; --srcBuf;
 	} while(!(*srcBuf).isInvalid());
+	cArrHolder rowBufPos(*destBuf, dataWidth); // -1 row
+	unsigned int b;
+	for(unsigned int i=0;i<height;i++) {
+		// row XOR
+		bool carry = false;
+		do {
+			b = carry?256:0;
+			b ^= **rowBufPos;
+			carry = !!(b & 1);
+			b ^= (b >> 1);
+			b &= 0xFF;
+			(*rowBufPos).setData(b);
+			++rowBufPos;
+		} while(!(*rowBufPos).isInvalid());
+		// row XOR
+		// row unXOR
+/*		(*rowBufPos).shiftPos(-(int)dataWidth);
+		b = 0;
+		do {
+			if(b&1) b = 128; else b = 0;
+			b ^= **rowBufPos;
+			b = b ^ (b>>1);
+			b &= 0xFF;
+			b ^= (b & 0xC0) >> 2;
+			b ^= (b & 0x30) >> 2;
+			b ^= (b & 0x0C) >> 2;
+			(*rowBufPos).setData(b);
+			++rowBufPos;
+		} while(!(*rowBufPos).isInvalid());
+*/		// row unXOR
+		if(i < height-1) // exception
+			(*rowBufPos).moveWindow(dataWidth);
+	}
 #ifdef Testing
 	for(int r=0;r<height;r++) {
 		for(int c=0;c<dataWidth;c++) {
