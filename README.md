@@ -1,15 +1,15 @@
 # El Tom Elzein's - Home Tools
 <table><tbody><tr><th align="left" valign="top">cString&lt;size&gt;</th><td>
-template class, it has fixed size defined by template parameter, clear structure - (max. size defined by type), has only 2 members - short size and char array with content. Has quick Utf-8 &lt;-&gt; Win1250 conversion feature.
+Template class, it has fixed size defined by template parameter, clear structure - (max. size defined by type), has only 2 members - short size and char array with content. Has quick Utf-8 &lt;-&gt; Win1250 conversion feature.
 </td></tr>
 <tr><th align="left" valign="top">fntXorPacker</th><td>
-stand-alone cmd utility, it can import only GLCD fonts (https://github.com/andygock/glcd) at the moment.<br>
-Only purpose at the moment is to generate XOR packed font (aprox. 30-50% size of bitmap version) - I have working Arduino implementation
-(modified Adafruit_ILI9340 Adafruit_GFX libs). There is also import of XOR fonts implemented as it has extended format and preview
-features in generated code.
+Cmd utility - can import GLCD fonts (https://github.com/andygock/glcd), ASCII or its own XORed fonts.<br>
+It can generate XOR packed font (aprox. 30-50% size of bitmap version) - I have working Arduino implementation
+(modified Adafruit_ILI9340 Adafruit_GFX libs).<br>
+Import of XOR fonts was implemented as it has extended format and preview features in generated code now and comment may be used as ASCII source for reimport (as it is simple to make small adjustments in any text editor).
 </td></tr>
 <tr><th align="left" valign="top">cArrayPtr</th><td>
-POC smarter array (smart pointer, boundaries check, parent/child chain, child window shifting, can manage external allocation; 1 child level only at the moment); created to finetune & simplify fntXorPacker logic.
+POC smarter array (smart pointer, boundaries check, data encapsulation/protection, parent/child window chain, child window shifting, can manage external allocation; 1 child level only at the moment); created to finetune & simplify terrible fntXorPacker still a bit "R&D" logic.
 </td></tr>
 <tr><th align="left" valign="top">ArduinoSimulator</th><td>
 Cage (port to VS 2008) using fonts created by XorPacker predecessor &amp; updated LCD libraries.
