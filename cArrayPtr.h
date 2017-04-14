@@ -127,7 +127,7 @@ public:
 			return -1;
 		} else if(m_pos > m_end) {
 			const_cast<unsigned char *>(m_pos) = m_end + 1; // ev. fix, should report error when it was more
-			return -1;
+			return 1;
 		}
 		return 0;
 	}
