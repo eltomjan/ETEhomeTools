@@ -558,10 +558,8 @@ void xorChar(cArrHolder& destBuf, unsigned int dataWidth, unsigned int size, uns
 			if(b&1) b = 128; else b = 0;
 			b ^= **rowBufPos;
 			b = b ^ (b>>1);
-			b &= 0xFF;
-			b ^= (b & 0xC0) >> 2;
-			b ^= (b & 0x30) >> 2;
-			b ^= (b & 0x0C) >> 2;
+			b ^= b >> 2;
+			b ^= b >> 4;
 			(*rowBufPos).setData(b);
 			++rowBufPos;
 		} while(!(*rowBufPos).isInvalid());
@@ -600,6 +598,18 @@ void xorCharRev(unsigned char *destBuf, unsigned int dataWidth, unsigned int siz
 	while(bufPos < srcBuf) {
 		*(bufPos+dataWidth) ^= *bufPos++;
 	}
+	// row unXOR
+	bufPos = destBuf;
+	int b = 0;
+	for(int i=0;i<size;i++) {
+		if(b&1) b = 128; else b = 0;
+		b ^= *bufPos;
+		b = b ^ (b>>1);
+		b ^= b >> 2;
+		b ^= b >> 4;
+		*bufPos++ = b;
+	}
+	// row unXOR
 	for(unsigned int r=0;r<height;r++)
 		for(unsigned int c=0;c<dataWidth;c++)
 			if(!*(srcBuf+c+(r*dataWidth))) zerosNo1++;
