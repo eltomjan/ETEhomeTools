@@ -32,8 +32,8 @@ int fntXorPacker(int argc, char *argv[])
 			dataWidth = (width/8) + !!(width&7);
 			dataHeight = (height/8) + !!(height&7);
 			charBufSize = dataWidth * height;
-			if(charBufSize < dataWidth * dataHeight) charBufSize = width * dataHeight;
-			bufSize = (chars + 1) * charBufSize;
+			if(charBufSize < width * dataHeight) charBufSize = width * dataHeight;
+			bufSize = (chars + 2) * charBufSize;
             string line;
 			size_t pos = 0;
 			bool data = false;
@@ -132,6 +132,7 @@ int fntXorPacker(int argc, char *argv[])
 								(*bufPos).shiftPos(charBufSize);
 							} else {
 								bufPos += charBufSize - charPos;
+								(*bufPos).shiftPos(charBufSize);
 							}
 							(*srcBuf2).shiftPos(charBufSize);
 							transformChar(oneRead, srcBuf2, width, dataWidth, charBufSize, height, zerosNo0);
@@ -145,6 +146,8 @@ int fntXorPacker(int argc, char *argv[])
 							src += "\n";
 							charPos = 0;
 							xor += readLinearChar(srcBuf3, width, height);
+							if(!ascii)
+								(*bufPos).shiftPos(-(long)charBufSize);
 						}
 					}
 				} while(getline(cFile, line)); // process file
@@ -201,6 +204,9 @@ int fntXorPacker(int argc, char *argv[])
 								rowBMmask = 128;
 								rowBitmapPtr++;
 							}
+						}
+						if(charBufSize > height*dataWidth) {
+							(*bufPos).shiftPos(charBufSize - height*dataWidth);
 						}
 					}
 					if(*colBitmapPtr) colBitmapPtr++;
@@ -346,16 +352,54 @@ int fntXorPacker(int argc, char *argv[])
 					ptr = rowBitmap;
 					cArrHolder bufPos(*nzData, bufSize);
 					int rows = height;
-					while((endLine = src.find('\n', startLine+1)) != string::npos) {
+					string rowBin, colBin;
+					while((endLine = src.find('\n', startLine+1)) != string::npos) { // comment generate loop
 						o << src.substr(startLine, endLine - startLine);
 						o << xor.substr(startLine, endLine - startLine);
 						if(rows > 0) {
-							o << (int)!!(*ptr & rowBMmask);
+							if(!!(*ptr & rowBMmask)) {
+								o << 1;
+								rowBin += '1';
+							} else {
+								o << 0;
+								rowBin += '0';
+							}
+							if(((height - rows) & 7) == 7) {
+								unsigned char hexMask = 1, rowHex = 0;
+								for(size_t i=rowBin.length()-1;i;i--) {
+									if(rowBin[i] > '0')
+										rowHex |= hexMask;
+									hexMask <<= 1;
+								}
+								rowBin += ' ';
+								rowBin += "0x";
+								rowBin += allowed[rowHex >> 4];
+								rowBin += allowed[rowHex & 15];
+								rowBin += ' ';
+							}
 							if(*ptr & rowBMmask) {
 								unsigned char cols = 0;
 								for(unsigned int c=0;c<dataWidth;c++) {
 									cols <<= 1;
-									cols |= !!(*ptrCB & colBMbit);
+									if(!!(*ptrCB & colBMbit)) {
+										cols |= 1;
+										colBin += '1';
+									} else {
+										colBin += '0';
+									}
+									if(!((colBin.length() + 6) % 14)) {
+										unsigned char hexMask = 1, colHex = 0;
+										for(size_t i=colBin.length()-1;i;i--) {
+											if(colBin[i] > '0')
+												colHex |= hexMask;
+											hexMask <<= 1;
+										}
+										colBin += ' ';
+										colBin += "0x";
+										colBin += allowed[colHex >> 4];
+										colBin += allowed[colHex & 15];
+										colBin += ' ';
+									}
 									o << (cols & 1);
 									colBMbit >>= 1;
 									if(!colBMbit) {
@@ -387,11 +431,20 @@ int fntXorPacker(int argc, char *argv[])
 								}
 								o << bin.substr(0,width) << hexVals;
 							} else {
-								for(unsigned int c=0;c<dataWidth;c++)
-									o << '-';
+								for(unsigned int c=0;c<dataWidth;c++) o << '-';
 							}
 						}
-						o << endl;
+						if(rows <= 2) {
+							if(rows < 2) {
+								o << colBin << endl;
+								colBin = "";
+							} else {
+								o << rowBin << (int)!!(*ptr & rowBMmask) << endl;
+								rowBin = "";
+							}
+						} else {
+							o << endl;
+						}
 						if(rows > 0)
 							rowBMmask >>= 1;
 						startLine = endLine+1;
@@ -402,7 +455,7 @@ int fntXorPacker(int argc, char *argv[])
 						rows--;
 						if(rows < 0)
 							rows = height;
-					}
+					} // comment generate loop
 					o << "*/" << endl;
 					o.close();
 				} else
@@ -516,10 +569,10 @@ void xorChar(cArrHolder& destBuf, unsigned int dataWidth, unsigned int size, uns
 	cArrHolder srcBuf(*destBuf, size - dataWidth); // -1 row
 	(*srcBuf).setPos((*srcBuf).end()); // end -1
 	
-#ifdef Testing
-	string check;
 	unsigned char mask = 128;
-	unsigned char *destBuf2 = (*destBuf).getPos();
+	string check;
+	const unsigned char *destBuf2 = (*destBuf).getPos();
+#ifdef Testing
 	for(int r=0;r<height;r++) {
 		for(int c=0;c<dataWidth;c++) {
 			mask = 128;
@@ -537,10 +590,10 @@ void xorChar(cArrHolder& destBuf, unsigned int dataWidth, unsigned int size, uns
 		--bufPos; --srcBuf;
 	} while(!(*srcBuf).isInvalid());
 	cArrHolder rowBufPos(*destBuf, dataWidth); // -1 row
-	unsigned int b;
+	unsigned int b, c;
 	for(unsigned int i=0;i<height;i++) {
 		// row XOR
-		bool carry = false;
+/*		bool carry = false;
 		do {
 			b = carry?256:0;
 			b ^= **rowBufPos;
@@ -550,7 +603,27 @@ void xorChar(cArrHolder& destBuf, unsigned int dataWidth, unsigned int size, uns
 			(*rowBufPos).setData(b);
 			++rowBufPos;
 		} while(!(*rowBufPos).isInvalid());
-		// row XOR
+/*		do {
+			b = **rowBufPos;
+			c = b;
+			if(carry) b ^= 128;
+			carry = !!(b & 1);
+			// 7 6 5 4 3 2 1 0
+			//   7 6 5 4 3 2 1
+			//     7 6 5 4 3 2
+			//       7 6 5 4 3
+			//         7 6 5 4
+			//           7 6 5
+			//             7 6
+			//               7
+			do {
+				c >>= 1;
+				b ^= c;
+			} while(c);
+			(*rowBufPos).setData(b);
+			++rowBufPos;
+		} while(!(*rowBufPos).isInvalid());
+*/		// row XOR
 		// row unXOR
 /*		(*rowBufPos).shiftPos(-(int)dataWidth);
 		b = 0;
@@ -564,7 +637,16 @@ void xorChar(cArrHolder& destBuf, unsigned int dataWidth, unsigned int size, uns
 			++rowBufPos;
 		} while(!(*rowBufPos).isInvalid());
 */		// row unXOR
-		if(i < height-1) // exception
+/*		(*rowBufPos).shiftPos(-(int)dataWidth);
+		b = 0;
+		do {
+			if(b&1) b = 128; else b = 0;
+			b ^= **rowBufPos;
+			b = b ^ (b>>1);
+			(*rowBufPos).setData(b);
+			++rowBufPos;
+		} while(!(*rowBufPos).isInvalid());
+*/		if(i < height-1)
 			(*rowBufPos).moveWindow(dataWidth);
 	}
 #ifdef Testing
