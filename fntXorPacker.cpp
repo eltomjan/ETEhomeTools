@@ -119,8 +119,8 @@ int fntXorPacker(int argc, char *argv[])
 						} // binary char read
 						if((glcd && charPos >= dataHeight) || ascii) { // 1 char read
 							if(!ascii) {
+								(*bufPos).shiftPos(-(long)charPos);
 								cArrHolder srcBuf(*bufPos, charBufSize);
-								(*srcBuf).moveWindow(-(long)charPos);
 								oneRead = readGlcChar(srcBuf, width, height);
 							} else {
 								oneRead += "|\n";
@@ -146,8 +146,6 @@ int fntXorPacker(int argc, char *argv[])
 							src += "\n";
 							charPos = 0;
 							xor += readLinearChar(srcBuf3, width, height);
-							if(!ascii)
-								(*bufPos).shiftPos(-(long)charBufSize);
 						}
 					}
 				} while(getline(cFile, line)); // process file
