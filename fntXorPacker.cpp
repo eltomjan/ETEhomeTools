@@ -131,7 +131,6 @@ int fntXorPacker(int argc, char *argv[])
 							if(ascii) {
 								(*bufPos).shiftPos(charBufSize);
 							} else {
-								bufPos += charBufSize - charPos;
 								(*bufPos).shiftPos(charBufSize);
 							}
 							(*srcBuf2).shiftPos(charBufSize);
@@ -679,7 +678,7 @@ void xorCharRev(unsigned char *destBuf, unsigned int dataWidth, unsigned int siz
 		*(bufPos+dataWidth) ^= *bufPos++;
 	}
 	// row unXOR
-	bufPos = destBuf;
+/*	bufPos = destBuf;
 	int b = 0;
 	for(int i=0;i<size;i++) {
 		if(b&1) b = 128; else b = 0;
@@ -689,7 +688,7 @@ void xorCharRev(unsigned char *destBuf, unsigned int dataWidth, unsigned int siz
 		b ^= b >> 4;
 		*bufPos++ = b;
 	}
-	// row unXOR
+*/	// row unXOR
 	for(unsigned int r=0;r<height;r++)
 		for(unsigned int c=0;c<dataWidth;c++)
 			if(!*(srcBuf+c+(r*dataWidth))) zerosNo1++;
