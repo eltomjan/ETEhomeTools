@@ -110,7 +110,7 @@ class _ILI9340 : public Adafruit_GFX {
   _ILI9340(uint8_t CS, uint8_t RS, uint8_t MOSI, uint8_t SCLK,
 uint8_t RST, uint8_t MISO);
   _ILI9340(uint8_t CS, uint8_t RS, uint8_t RST);
-	bool m_tiny;
+	bool m_proportional;
 
   void begin(void),
            setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1),
