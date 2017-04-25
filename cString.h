@@ -90,17 +90,29 @@ public:
 //		while(m_size--) *ptr++ = (a=a>'8'?'0':a+1); // inicializace
 		*m_data = 0; // neinicializovany string by se nemel pouzivat, takze maly chytak bude v nem - 1234567890...
 		m_size = 0;
-	};
+	}
+	cString (const cString<c_maxSize>& src) { // copy constructor
+		m_size = src.length();
+		memcpy(m_data, src.m_data, m_size + 1);
+	}
 	cString (const char* src) {
+		m_size = 0;
 		operator =(src);
+	}
+	cString (const char src) {
+		m_size = 1;
+		*m_data = src;
+		*(m_data+1) = 0;
 	}
 	cString& operator =(const char* src) {
 		char *ptr = m_data;
 		unsigned short int maxSize = c_maxSize;
-		m_size = 0;
-		if(src && *src)
+		if(src && m_size && !*src) return *this; // empty string - no change
+		if(src && *src) {
+			m_size = 0;
 			while((maxSize-- > 0) && (*ptr++ = *src++)) m_size++;
-		*(m_data + m_size) = 0;
+		}
+		if(src) *(m_data + m_size) = 0;
 		return *this;
 	}
 	cString fromUtf(const char *src) {
@@ -120,11 +132,13 @@ public:
 		char *ptr = m_data + m_size;
 		int maxSize = c_maxSize - m_size, maxSizeMem = maxSize;
 		if(maxSize < 1) return *this;
+		if(!src) return *this;
 		while(((maxSize--) > 0) && (*ptr++ = *src++));
 		if(maxSize < -1) throw "cString Internal error";
 		if(maxSize <= 0) {
 			*(m_data + c_maxSize) = 0;
-			maxSize = 0;
+			if(maxSize == 0 && !*(ptr-1)) maxSize = 1;
+			else maxSize = 0;
 		} else {
 			*(m_data + maxSizeMem - maxSize + m_size - 1) = 0;
 			maxSize++;
@@ -213,21 +227,25 @@ public:
 		}
 		return *this;
 	}
-	bool operator  <(cString& nd) { return strcmp(m_data, nd.m_data) < 0; }
-	bool operator  >(cString& nd) { return strcmp(m_data, nd.m_data) > 0; }
-	bool operator <=(cString& nd) { return strcmp(m_data, nd.m_data) <= 0; }
-	bool operator >=(cString& nd) { return strcmp(m_data, nd.m_data) >= 0; }
-	bool operator ==(cString& nd) {
+	bool operator  <(cString& nd) const { return strcmp(m_data, nd.m_data) < 0; }
+	bool operator  >(cString& nd) const { return strcmp(m_data, nd.m_data) > 0; }
+	bool operator <=(cString& nd) const { return strcmp(m_data, nd.m_data) <= 0; }
+	bool operator >=(cString& nd) const { return strcmp(m_data, nd.m_data) >= 0; }
+	bool operator ==(cString& nd) const {
 		if(m_size != nd.m_size) return false;
 		return !strcmp(m_data, nd.m_data);
 	}
-	bool operator !=(cString& nd) {
+	bool operator !=(cString& nd) const {
 		if(m_size != nd.m_size) return true;
 		return (0 != strcmp(m_data, nd.m_data));
 	}
-	bool operator <(char* nd) { return strcmp(m_data, nd) < 0; }
-	bool operator >(char* nd) { return strcmp(m_data, nd) > 0; }
-	bool operator ==(const char* nd) { return !strcmp(m_data, nd); }
+	bool operator !=(const char* nd) const {
+		if(!nd) return true;
+		return (0 != strcmp(m_data, nd));
+	}
+	bool operator <(char* nd) const { return strcmp(m_data, nd) < 0; }
+	bool operator >(char* nd) const { return strcmp(m_data, nd) > 0; }
+	bool operator ==(const char* nd) const { return !strcmp(m_data, nd); }
 	inline operator const char*() const { return (const char*)m_data; }
 	inline const char *c_str() const { return const_cast<char*>(m_data); }
 	inline unsigned short int max_size() const { return c_maxSize; }
@@ -251,7 +269,7 @@ public:
 	inline size_t find(const char *chr, size_t pos = 0) {
 		char* ptr;
 
-		if(m_size <= pos)
+		if(!chr || m_size <= pos)
 			return string::npos;
 		ptr = strstr(m_data + pos, chr);
 		if (!ptr)
@@ -260,7 +278,7 @@ public:
 		return ptr - m_data;
 	}
 	template<unsigned short int T>
-	size_t find(const cString<T>& str, unsigned short int pos = 0) {
+	size_t find(const cString<T>& str, size_t pos = 0) {
 		char* ptr;
 
 		if(m_size < pos || (m_size - pos) < str.length())
@@ -271,12 +289,12 @@ public:
 
 		return ptr - m_data;
 	}
-	cString substr(unsigned short int pos = 0, unsigned short int len = -1) {
+	cString substr(unsigned short int pos = 0, unsigned short int len = -1) const {
 		cString<c_maxSize> res;
 		if(pos > m_size) return res;
 		if(pos+len < c_maxSize) {
 			memcpy(res.m_data, m_data + pos, len);
-			*(&res[len-1]+1) = 0;
+			*(res.m_data+len) = 0;
 			res = res.m_data;
 		} else res = (m_data + pos);
 		return res;
