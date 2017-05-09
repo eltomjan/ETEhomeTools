@@ -248,6 +248,11 @@ int main(int argc, char *argv[]) {
 				check2 += "|\n";
 			}
 			if((glyph->width * glyph->height) & 7) {
+				while(byte < 255) {
+					byte <<= 1;
+				}
+				(*bitCollection).addBitMappedByte((unsigned char)byte); // save 1/8 zero flag bit
+				fontPos++;
 				newBytes += "0x";
 				while(byte < 256) byte <<= 1;
 				byte &= 255;
@@ -296,8 +301,9 @@ int main(int argc, char *argv[]) {
 		filep << "/*" << packedSize << "/" << (*bitCollection).Capacity() << " "
 			<< packedSize * 100 / (*bitCollection).Capacity() << "% */" <<
 			"\nconst uint8_t " << gfxFontNames[i] << "Bitmaps[] PROGMEM = {";
-		cout << packedSize << "/" << (*bitCollection).Capacity() << " "
+		cout << gfxFontNames[i] << " " << packedSize << "/" << (*bitCollection).Capacity() << " "
 			<< packedSize * 100 / (*bitCollection).Capacity() << "%\n";
+		if(packedSize > (*bitCollection).Capacity()) continue;
 		for(int i=0;i<packedSize;i++) {
 			unsigned char byte = **bitCollection;
 			if(i) filep << ", ";
@@ -323,3 +329,56 @@ int main(int argc, char *argv[]) {
 		filep.close();
 	}
 }
+/* Bitmap pack results:
+FreeMono12pt7b 1092/1471 74%
+FreeMono18pt7b 1919/3095 62%
+FreeMono24pt7b 3004/5663 53%
+FreeMono9pt7b 737/847 87%
+FreeMonoBold12pt7b 1325/1735 76%
+FreeMonoBold18pt7b 2476/3815 64%
+FreeMonoBold24pt7b 3756/6799 55%
+FreeMonoBold9pt7b 842/999 84%
+FreeMonoBoldOblique12pt7b 1584/1967 80%
+FreeMonoBoldOblique18pt7b 2917/4255 68%
+FreeMonoBoldOblique24pt7b 4322/7639 56%
+FreeMonoBoldOblique9pt7b 1040/1167 89%
+FreeMonoOblique12pt7b 1329/1711 77%
+FreeMonoOblique18pt7b 2326/3519 66%
+FreeMonoOblique24pt7b 3601/6455 55%
+FreeMonoOblique9pt7b 875/983 89%
+FreeSans12pt7b 1430/1975 72%
+FreeSans18pt7b 2476/4159 59%
+FreeSans24pt7b 3773/7463 50%
+FreeSans9pt7b 872/1151 75%
+FreeSansBold12pt7b 1477/2191 67%
+FreeSansBold18pt7b 2528/4503 56%
+FreeSansBold24pt7b 3797/8143 46%
+FreeSansBold9pt7b 959/1231 77%
+FreeSansBoldOblique12pt7b 1876/2535 74%
+FreeSansBoldOblique18pt7b 3133/5271 59%
+FreeSansBoldOblique24pt7b 4708/9447 49%
+FreeSansBoldOblique9pt7b 1212/1463 82%
+FreeSansOblique12pt7b 1778/2367 75%
+FreeSansOblique18pt7b 3099/4951 62%
+FreeSansOblique24pt7b 4700/8815 53%
+FreeSansOblique9pt7b 1135/1375 82%
+FreeSerif12pt7b 1348/1839 73%
+FreeSerif18pt7b 2474/3887 63%
+FreeSerif24pt7b 3775/7015 53%
+FreeSerif9pt7b 890/1079 82%
+FreeSerifBold12pt7b 1441/1991 72%
+FreeSerifBold18pt7b 2616/4279 61%
+FreeSerifBold24pt7b 4009/7847 51%
+FreeSerifBold9pt7b 923/1167 79%
+FreeSerifBoldItalic12pt7b 1755/2239 78%
+FreeSerifBoldItalic18pt7b 3094/4743 65%
+FreeSerifBoldItalic24pt7b 4639/8247 56%
+FreeSerifBoldItalic9pt7b 1140/1311 86%
+FreeSerifItalic12pt7b 1601/1983 80%
+FreeSerifItalic18pt7b 2835/4135 68%
+FreeSerifItalic24pt7b 4366/7583 57%
+FreeSerifItalic9pt7b 1069/1167 91%
+Org_01 264/271 97%
+Picopixel 185/183 101%
+TomThumb 376/423 88%
+*/
