@@ -14,4 +14,7 @@ POC smarter array (smart pointer, boundaries check, data encapsulation/protectio
 <tr><th align="left" valign="top">ArduinoSimulator</th><td>
 Cage (port to VS 2008) using fonts created by XorPacker predecessor &amp; updated LCD libraries.
 </td></tr>
+<tr><th align="left" valign="top">gfxXorPacker.cpp</th><td>
+fntXorPacker row XOR applied to GFX fonts bitmap + test processing on all current fonts / Picopixel skipped (2B increase).
+</td></tr>
 </tbody></table>
