@@ -10,6 +10,7 @@ public:
 		m_refCnt = 0;
 		m_parent = NULL;
 		m_begin = m_pos = m_end = NULL;
+		m_bitPos = 7;
 		m_manageData = true;
 	}
 	const cArray(const long c_size) {
@@ -20,6 +21,7 @@ public:
 			m_begin = (unsigned char*)&m_data[0];
 			m_end = m_begin + c_size - 1;
 			m_pos = m_begin;
+			m_bitPos = 7;
 //			for(int i=0;i<c_size;i++) (*m_data)[i] = i;
 		}
 	}
@@ -27,6 +29,7 @@ public:
 		new (this) cArray();
 		m_parent = const_cast<cArray*>(&parent);
 		m_pos = parent.m_pos;
+		m_bitPos = parent.m_bitPos;
 		m_begin = parent.m_pos;
 		if(parent.m_end > parent.m_pos + c_size - 1) {
 			m_end = parent.m_pos + c_size - 1;
@@ -81,6 +84,60 @@ public:
 		}
 		return false;
 	}
+	const bool addBit(const bool b) {
+		if(m_pos <= m_end) {
+			if(m_bitPos < 8) {
+				unsigned char bitMask = 1 << m_bitPos;
+				if(b)
+					*m_pos |= bitMask;
+				else
+					*m_pos &= (255-bitMask);
+				if(!m_bitPos) {
+					m_bitPos = 8;
+				}
+				m_bitPos--;
+			}
+			return true;
+		}
+		return false;
+	}
+	const char countOnes() {
+		unsigned char map = *m_pos, ones = 0;
+		while(map) { // count bytes used
+			if(map & 1) ones++;
+			map >>= 1;
+		}
+		return ones;
+	}
+	const bool addBitMappedByte(const unsigned char b) {
+		if(!b) {
+			addBit(0);
+			if(m_bitPos == 7) {
+				m_pos += 1 + countOnes();
+			}
+			return m_pos <= m_end;
+		}
+		addBit(1);
+		char ones = countOnes();
+		if(m_pos+ones > m_end) {
+			m_bitPos++;
+			addBit(0);
+			return false;
+		}
+		*(m_pos+ones) = b;
+		if(m_bitPos == 7) {
+			ones++;
+			m_pos += ones;
+		}
+		return m_pos <= m_end;
+	}
+	const long getBytesUsed() {
+		if(m_bitPos == 7) {
+			return m_pos - m_begin;
+		} else {
+			return m_pos - m_begin + 1 + countOnes();
+		}
+	}
 	const bool shiftPos(const long number) {
 		if(m_pos + number > m_end) {
 #ifdef TESTING
@@ -103,6 +160,18 @@ public:
 		int bug;
 		if(!(bug = checkPos(pos))) {
 			m_pos = const_cast<unsigned char *>(pos);
+			m_bitPos = 7;
+			return true;
+		}
+#ifdef TESTING
+			printf("cArray setPos %i !\n", bug);
+#endif
+		return false;
+	}
+	const bool setBitPos(const unsigned char pos) {
+		int bug;
+		if(pos <= 7 && !(bug = checkPos(m_pos))) {
+			m_bitPos = pos;
 			return true;
 		}
 #ifdef TESTING
@@ -114,6 +183,7 @@ public:
 		int bug;
 		if(!(bug = checkPos(m_begin + pos))) {
 			m_pos = m_begin + pos;
+			m_bitPos = 7;
 			return true;
 		}
 #ifdef TESTING
@@ -160,6 +230,12 @@ public:
 	}
 	const unsigned char *getPos() const {
 		return m_pos;
+	}
+	const unsigned long Capacity() const {
+		return m_end - m_begin;
+	}
+	const unsigned char getBitPos() const {
+		return m_bitPos;
 	}
 	const bool moveWindow(const long shift) {
 		int bug;
@@ -208,6 +284,7 @@ protected:
 
 	cArray *m_parent;
 	unsigned char *m_pos;
+	unsigned char m_bitPos;
 	unsigned char *m_begin;
 	unsigned char *m_end;
 	unsigned char (*m_data)[PREVIEW_SIZE];

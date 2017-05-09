@@ -64,11 +64,17 @@ using namespace std;
 int main(int argc, char *argv[]) {
 #define fontsNo 51
 	const GFXfont* gfxFontObjs[fontsNo] = { &FreeMono12pt7b, &FreeMono18pt7b, &FreeMono24pt7b, &FreeMono9pt7b, &FreeMonoBold12pt7b, &FreeMonoBold18pt7b, &FreeMonoBold24pt7b, &FreeMonoBold9pt7b, &FreeMonoBoldOblique12pt7b, &FreeMonoBoldOblique18pt7b, &FreeMonoBoldOblique24pt7b, &FreeMonoBoldOblique9pt7b, &FreeMonoOblique12pt7b, &FreeMonoOblique18pt7b, &FreeMonoOblique24pt7b, &FreeMonoOblique9pt7b, &FreeSans12pt7b, &FreeSans18pt7b, &FreeSans24pt7b, &FreeSans9pt7b, &FreeSansBold12pt7b, &FreeSansBold18pt7b, &FreeSansBold24pt7b, &FreeSansBold9pt7b, &FreeSansBoldOblique12pt7b, &FreeSansBoldOblique18pt7b, &FreeSansBoldOblique24pt7b, &FreeSansBoldOblique9pt7b, &FreeSansOblique12pt7b, &FreeSansOblique18pt7b, &FreeSansOblique24pt7b, &FreeSansOblique9pt7b, &FreeSerif12pt7b, &FreeSerif18pt7b, &FreeSerif24pt7b, &FreeSerif9pt7b, &FreeSerifBold12pt7b, &FreeSerifBold18pt7b, &FreeSerifBold24pt7b, &FreeSerifBold9pt7b, &FreeSerifBoldItalic12pt7b, &FreeSerifBoldItalic18pt7b, &FreeSerifBoldItalic24pt7b, &FreeSerifBoldItalic9pt7b, &FreeSerifItalic12pt7b, &FreeSerifItalic18pt7b, &FreeSerifItalic24pt7b, &FreeSerifItalic9pt7b, &Org_01, &Picopixel, &TomThumb };
+	const char* gfxFontNames[fontsNo] = { "FreeMono12pt7b", "FreeMono18pt7b", "FreeMono24pt7b", "FreeMono9pt7b", "FreeMonoBold12pt7b", "FreeMonoBold18pt7b", "FreeMonoBold24pt7b", "FreeMonoBold9pt7b", "FreeMonoBoldOblique12pt7b", "FreeMonoBoldOblique18pt7b", "FreeMonoBoldOblique24pt7b", "FreeMonoBoldOblique9pt7b", "FreeMonoOblique12pt7b", "FreeMonoOblique18pt7b", "FreeMonoOblique24pt7b", "FreeMonoOblique9pt7b", "FreeSans12pt7b", "FreeSans18pt7b", "FreeSans24pt7b", "FreeSans9pt7b", "FreeSansBold12pt7b", "FreeSansBold18pt7b", "FreeSansBold24pt7b", "FreeSansBold9pt7b", "FreeSansBoldOblique12pt7b", "FreeSansBoldOblique18pt7b", "FreeSansBoldOblique24pt7b", "FreeSansBoldOblique9pt7b", "FreeSansOblique12pt7b", "FreeSansOblique18pt7b", "FreeSansOblique24pt7b", "FreeSansOblique9pt7b", "FreeSerif12pt7b", "FreeSerif18pt7b", "FreeSerif24pt7b", "FreeSerif9pt7b", "FreeSerifBold12pt7b", "FreeSerifBold18pt7b", "FreeSerifBold24pt7b", "FreeSerifBold9pt7b", "FreeSerifBoldItalic12pt7b", "FreeSerifBoldItalic18pt7b", "FreeSerifBoldItalic24pt7b", "FreeSerifBoldItalic9pt7b", "FreeSerifItalic12pt7b", "FreeSerifItalic18pt7b", "FreeSerifItalic24pt7b", "FreeSerifItalic9pt7b", "Org_01", "Picopixel", "TomThumb" };
 	int i=0;
 	uint8_t c = 33, size = 1;
 	for(int i=0;i<fontsNo;i++) {
+		char *hexa = "0123456789ABCDEF";
 		c=33;
 	  	const GFXfont *gfxFont = gfxFontObjs[i];
+		uint16_t fontPos = 0;
+		cArrHolder bitCollection((char*)gfxFont->glyph - (char*)gfxFont->bitmap); // size from original
+		GFXglyph *glyphs = new GFXglyph[gfxFont->last - gfxFont->first + 1];
+		(*bitCollection).set2(0);
         c -= pgm_read_byte(&gfxFont->first);
 		int chars = gfxFont->last - gfxFont->first;
         // Character is assumed previously filtered by write() to eliminate
@@ -79,9 +85,12 @@ int main(int argc, char *argv[]) {
 		string bin;
 		string check, check2;
 		string newBytes;
+		memcpy(&glyphs[0], gfxFont->glyph, sizeof(GFXglyph));
 		while(c <= chars) {
 			GFXglyph *glyph  = &(((GFXglyph *)pgm_read_pointer(&gfxFont->glyph))[c]);
 			uint8_t  *bitmap = (uint8_t *)pgm_read_pointer(&gfxFont->bitmap);
+			memcpy(&glyphs[c], glyph, sizeof(GFXglyph));
+			glyphs[c].bitmapOffset = fontPos;
 
 			uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
 			uint8_t  w  = pgm_read_byte(&glyph->width),
@@ -194,7 +203,6 @@ int main(int argc, char *argv[]) {
 			destBuf2 = (*destBuf).getPos();
 	//		check = "";
 			uint16_t byte = 1;
-			char *hexa = "0123456789ABCDEF";
 			for(int r=0;r<h;r++) {
 				mask = 128;
 				for(int c=0;mask && c<w;c++) {
@@ -226,6 +234,8 @@ int main(int argc, char *argv[]) {
 						mask = 128;
 					}
 					if(byte > 255) {
+						(*bitCollection).addBitMappedByte((unsigned char)byte); // save 1/8 zero flag bit
+						fontPos++;
 						newBytes += "0x";
 						byte &= 255;
 						newBytes += hexa[byte >> 4];
@@ -273,11 +283,43 @@ int main(int argc, char *argv[]) {
 //			newBytes += "\n";
 			c++;
 		}
-		string name = "output\\";
+		string name = "output\\o";
 		name += i<10?'0':char((i/10)+'0');
 		name += char((i%10)+'0');
 		ofstream file(name.c_str());
 		file << newBytes;
 		file.close();
+		int packedSize = (*bitCollection).getBytesUsed();
+		name = name.substr(0,name.length()-3) + gfxFontNames[i] + ".h";
+		(*bitCollection).setPos(0l);
+		ofstream filep(name.c_str());
+		filep << "/*" << packedSize << "/" << (*bitCollection).Capacity() << " "
+			<< packedSize * 100 / (*bitCollection).Capacity() << "% */" <<
+			"\nconst uint8_t " << gfxFontNames[i] << "Bitmaps[] PROGMEM = {";
+		cout << packedSize << "/" << (*bitCollection).Capacity() << " "
+			<< packedSize * 100 / (*bitCollection).Capacity() << "%\n";
+		for(int i=0;i<packedSize;i++) {
+			unsigned char byte = **bitCollection;
+			if(i) filep << ", ";
+			filep << "0x" << hexa[byte >> 4] << hexa[byte & 15];
+			++bitCollection;
+		}
+		filep << "};\n" << "\nconst GFXglyph " << gfxFontNames[i] << "Glyphs[] PROGMEM = {\n";
+		int glyphsNo = gfxFont->last - gfxFont->first + 1;
+		for(int i=0;i<glyphsNo;i++) {
+			filep << "{" << glyphs[i].bitmapOffset << ", " <<
+				(int)glyphs[i].width << ", " <<
+				(int)glyphs[i].height << ", " <<
+				(int)glyphs[i].xAdvance << ", " <<
+				(int)glyphs[i].xOffset << ", " <<
+				(int)glyphs[i].yOffset;
+			if(i<glyphsNo-1) filep << "},\n";
+			else filep << "} };\n";
+		}
+		filep << "\nconst GFXfont " << gfxFontNames[i] << " PROGMEM = {\n" <<
+			"(uint8_t  *)" << gfxFontNames[i] << "Bitmaps,\n" <<
+			"(GFXglyph *)" << gfxFontNames[i] << "Glyphs,\n" <<
+			(int)gfxFont->first << ", " << (int)gfxFont->last << ", " << (int)gfxFont->yAdvance << " };\n";
+		filep.close();
 	}
 }
