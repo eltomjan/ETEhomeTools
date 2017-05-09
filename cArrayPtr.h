@@ -122,10 +122,10 @@ public:
 		return false;
 	}
 	const int checkPos(const unsigned char *pos) const {
-		if(m_pos < m_begin) {
+		if(pos < m_begin) {
 			const_cast<unsigned char *>(m_pos) = m_begin - 1; // ev. fix, should report error when it was less
 			return -1;
-		} else if(m_pos > m_end) {
+		} else if(pos > m_end) {
 			const_cast<unsigned char *>(m_pos) = m_end + 1; // ev. fix, should report error when it was more
 			return 1;
 		}
