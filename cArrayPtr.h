@@ -11,6 +11,7 @@ public:
 		m_parent = NULL;
 		m_begin = m_pos = m_end = NULL;
 		m_bitPos = 7;
+		m_ones = 0;
 		m_manageData = true;
 	}
 	const cArray(const long c_size) {
@@ -22,6 +23,7 @@ public:
 			m_end = m_begin + c_size - 1;
 			m_pos = m_begin;
 			m_bitPos = 7;
+			m_ones = 0;
 //			for(int i=0;i<c_size;i++) (*m_data)[i] = i;
 		}
 	}
@@ -30,6 +32,7 @@ public:
 		m_parent = const_cast<cArray*>(&parent);
 		m_pos = parent.m_pos;
 		m_bitPos = parent.m_bitPos;
+		m_ones = parent.m_ones;
 		m_begin = parent.m_pos;
 		if(parent.m_end > parent.m_pos + c_size - 1) {
 			m_end = parent.m_pos + c_size - 1;
@@ -96,21 +99,22 @@ public:
 		if(!b) {
 			addBit(0);
 			if(m_bitPos == 7) {
-				m_pos += 1 + countOnes();
+				m_pos += 1 + m_ones;
+				m_ones = 0;
 			}
 			return m_pos <= m_end;
-		}
+		} // else part - b != 0 next
 		addBit(1);
-		char ones = countOnes();
-		if(m_pos+ones > m_end) {
+		if(m_pos+m_ones > m_end) { // out of buffer - put zero to prevent reading past end
 			m_bitPos++;
 			addBit(0);
+			m_ones--;
 			return false;
 		}
-		*(m_pos+ones) = b;
+		*(m_pos+m_ones) = b;
 		if(m_bitPos == 7) {
-			ones++;
-			m_pos += ones;
+			m_pos += m_ones + 1;
+			m_ones = 0;
 		}
 		return m_pos <= m_end;
 	}
@@ -118,7 +122,7 @@ public:
 		if(m_bitPos == 7) {
 			return m_pos - m_begin;
 		} else {
-			return m_pos - m_begin + 1 + countOnes();
+			return m_pos - m_begin + 1 + m_ones;
 		}
 	}
 	const bool shiftPos(const long number) {
@@ -155,6 +159,7 @@ public:
 		int bug;
 		if(pos <= 7 && !(bug = checkPos(m_pos))) {
 			m_bitPos = pos;
+			m_ones = countOnes();
 			return true;
 		}
 #ifdef TESTING
@@ -262,10 +267,12 @@ protected:
 		if(m_pos <= m_end) {
 			if(m_bitPos < 8) {
 				unsigned char bitMask = 1 << m_bitPos;
-				if(b)
+				if(b) {
 					*m_pos |= bitMask;
-				else
+					m_ones++;
+				} else {
 					*m_pos &= (255-bitMask);
+				}
 				if(!m_bitPos) {
 					m_bitPos = 8;
 				}
@@ -285,6 +292,7 @@ protected:
 	cArray *m_parent;
 	unsigned char *m_pos;
 	unsigned char m_bitPos;
+	unsigned char m_ones;
 	unsigned char *m_begin;
 	unsigned char *m_end;
 	unsigned char (*m_data)[PREVIEW_SIZE];

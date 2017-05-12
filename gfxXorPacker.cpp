@@ -294,7 +294,7 @@ int main(int argc, char *argv[]) {
 		ofstream file(name.c_str());
 		file << newBytes;
 		file.close();
-		int packedSize = (*bitCollection).getBytesUsed();
+		unsigned int packedSize = (*bitCollection).getBytesUsed();
 		name = name.substr(0,name.length()-3) + gfxFontNames[i] + ".h";
 		(*bitCollection).setPos(0l);
 		ofstream filep(name.c_str());
@@ -304,22 +304,22 @@ int main(int argc, char *argv[]) {
 		cout << gfxFontNames[i] << " " << packedSize << "/" << (*bitCollection).Capacity() << " "
 			<< packedSize * 100 / (*bitCollection).Capacity() << "%\n";
 		if(packedSize > (*bitCollection).Capacity()) continue;
-		for(int i=0;i<packedSize;i++) {
+		for(unsigned int j=0;j<packedSize;j++) {
 			unsigned char byte = **bitCollection;
-			if(i) filep << ", ";
+			if(j) filep << ", ";
 			filep << "0x" << hexa[byte >> 4] << hexa[byte & 15];
 			++bitCollection;
 		}
 		filep << "};\n" << "\nconst GFXglyph " << gfxFontNames[i] << "Glyphs[] PROGMEM = {\n";
 		int glyphsNo = gfxFont->last - gfxFont->first + 1;
-		for(int i=0;i<glyphsNo;i++) {
-			filep << "{" << glyphs[i].bitmapOffset << ", " <<
-				(int)glyphs[i].width << ", " <<
-				(int)glyphs[i].height << ", " <<
-				(int)glyphs[i].xAdvance << ", " <<
-				(int)glyphs[i].xOffset << ", " <<
-				(int)glyphs[i].yOffset;
-			if(i<glyphsNo-1) filep << "},\n";
+		for(int j=0;j<glyphsNo;j++) {
+			filep << "{" << glyphs[j].bitmapOffset << ", " <<
+				(int)glyphs[j].width << ", " <<
+				(int)glyphs[j].height << ", " <<
+				(int)glyphs[j].xAdvance << ", " <<
+				(int)glyphs[j].xOffset << ", " <<
+				(int)glyphs[j].yOffset;
+			if(j<glyphsNo-1) filep << "},\n";
 			else filep << "} };\n";
 		}
 		filep << "\nconst GFXfont " << gfxFontNames[i] << " PROGMEM = {\n" <<
