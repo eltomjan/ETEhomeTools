@@ -84,23 +84,6 @@ public:
 		}
 		return false;
 	}
-	const bool addBit(const bool b) {
-		if(m_pos <= m_end) {
-			if(m_bitPos < 8) {
-				unsigned char bitMask = 1 << m_bitPos;
-				if(b)
-					*m_pos |= bitMask;
-				else
-					*m_pos &= (255-bitMask);
-				if(!m_bitPos) {
-					m_bitPos = 8;
-				}
-				m_bitPos--;
-			}
-			return true;
-		}
-		return false;
-	}
 	const char countOnes() {
 		unsigned char map = *m_pos, ones = 0;
 		while(map) { // count bytes used
@@ -275,6 +258,23 @@ public:
 	}
 
 protected:
+	const bool addBit(const bool b) { // m_pos not adjusted => should not be used outside
+		if(m_pos <= m_end) {
+			if(m_bitPos < 8) {
+				unsigned char bitMask = 1 << m_bitPos;
+				if(b)
+					*m_pos |= bitMask;
+				else
+					*m_pos &= (255-bitMask);
+				if(!m_bitPos) {
+					m_bitPos = 8;
+				}
+				m_bitPos--;
+			}
+			return true;
+		}
+		return false;
+	}
 	void move2cArray(const unsigned char *parent, const long c_size) {
 		m_pos = const_cast<unsigned char *>(parent);
 		m_begin = const_cast<unsigned char *>(parent);
