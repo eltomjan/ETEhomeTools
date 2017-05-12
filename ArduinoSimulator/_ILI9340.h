@@ -143,7 +143,7 @@ void dummyclock(void);
   uint8_t spiread(void);
 
 #if ARDUINO < 100
-  virtual size_t write(uint8_t);
+  virtual size_t writeX(uint8_t);
 #else
   virtual void   write(uint8_t);
 #endif

@@ -293,13 +293,15 @@ uint8_t _ILI9340::spiread(void) {
 }
 
 #if ARDUINO < 100
-size_t _ILI9340::write(uint8_t c) {
+size_t _ILI9340::writeX(uint8_t c) {
 #else
 void _ILI9340::write(uint8_t c) {
 #endif
 	int charWidth;
   if (c == '\n') {
-    cursor_y += textsize*9-2;
+	const unsigned char* begin = m_font;
+	unsigned char width = pgm_read_byte(begin+3), height = pgm_read_byte(begin+4);
+    cursor_y += height;
     cursor_x = 0;
   } else if (c == '\r') {
     // skip em
