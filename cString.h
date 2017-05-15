@@ -1,3 +1,4 @@
+#define TestingCstring
 #ifndef CSTRING
 #define CSTRING
 #include <string.h>
@@ -107,7 +108,11 @@ public:
 	cString& operator =(const char* src) {
 		char *ptr = m_data;
 		unsigned short int maxSize = c_maxSize;
-		if(src && m_size && !*src) return *this; // empty string - no change
+		if(src && m_size && !*src) {
+			m_size = 0;
+			*m_data = 0;
+			return *this;
+		}
 		if(src && *src) {
 			m_size = 0;
 			while((maxSize-- > 0) && (*ptr++ = *src++)) m_size++;
@@ -136,7 +141,7 @@ public:
 		while(((maxSize--) > 0) && (*ptr++ = *src++));
 		if(maxSize < -1) throw "cString Internal error";
 		if(maxSize <= 0) {
-			*(m_data + c_maxSize) = 0;
+			if(maxSize < 0) *(m_data + c_maxSize) = 0;
 			if(maxSize == 0 && !*(ptr-1)) maxSize = 1;
 			else maxSize = 0;
 		} else {
@@ -429,4 +434,627 @@ istream& operator >> (istream& os, cString<T>& str) {
 #endif
 	return os;
 }
+#endif
+
+#ifdef TestingCstring
+static class Tester {
+	void EXPECT_TRUE (bool args )
+	{
+		if (!(args)) { fprintf(stderr, "test failed (EXPECT_TRUE) in %s, line %d\n", __FILE__, __LINE__);
+		  exit(1);
+		}
+	}
+	// https://android.googlesource.com/platform/external/astl/+/donut-release2/tests/test_string.cpp
+	/* -*- c++ -*- */ 
+	/* 
+	* Copyright (C) 2009 The Android Open Source Project 
+	* All rights reserved. 
+	* 
+	* Redistribution and use in source and binary forms, with or without 
+	* modification, are permitted provided that the following conditions 
+	* are met: 
+	* * Redistributions of source code must retain the above copyright 
+	* notice, this list of conditions and the following disclaimer. 
+	* * Redistributions in binary form must reproduce the above copyright 
+	* notice, this list of conditions and the following disclaimer in 
+	* the documentation and/or other materials provided with the 
+	* distribution. 
+	* 
+	* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+	* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+	* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
+	* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
+	* COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
+	* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+	* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS 
+	* OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+	* AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+	* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+	* OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+	* SUCH DAMAGE. 
+	*/
+	bool testConstructorCString() 
+	{ 
+		cString<50> empty_str1; 
+		EXPECT_TRUE(empty_str1.length() == 0); 
+
+		cString<50> empty_str2(""); 
+		EXPECT_TRUE(empty_str2.length() == 0); 
+
+		const char empty_as_array[] = ""; 
+		string empty_str3(empty_as_array); 
+		EXPECT_TRUE(empty_str3.length() == 0); 
+
+		const char literal[] = "scott mills cracks me up"; 
+		cString<30> str1(literal); 
+		EXPECT_TRUE(strcmp(literal, str1.c_str()) == 0); 
+
+		cString<30> str2(literal);
+		str2 = str2.substr(0, 11);
+		EXPECT_TRUE(strcmp("scott mills", str2.c_str()) == 0); 
+
+		cString<30> str3(literal); 
+		EXPECT_TRUE(strcmp(literal, str3.c_str()) == 0); 
+
+		const char text[] = {'l','a','d','y',' ','g','a','g','a'}; 
+
+		cString<1> str7(""); 
+		EXPECT_TRUE(empty_str1.length() == 0); 
+		return true; 
+	} 
+	bool testConstructorString() 
+	{ 
+		cString<1> empty_str1; 
+		cString<1> empty_str2; 
+
+		cString<1> empty_str3(empty_str2); 
+		EXPECT_TRUE(empty_str3.length() == 0); 
+
+		const char string_with_nulls[] = "contains 2 \0 bytes \0.";
+		cString<24>& str1=*(cString<24>*)"\x15\0contains 2 \0 bytes \0."; // (string_with_nulls, 21);
+		EXPECT_TRUE(str1.length() == 21); 
+
+		cString<24> str2 (str1);  // default undefined copy constructor
+		EXPECT_TRUE(str1.length() == 21); 
+
+		const char literal[] = "scott mills cracks me up"; 
+		const cString<24> str3(literal); 
+		EXPECT_TRUE(str3 == literal); 
+
+		return true; 
+	} 
+	bool testConstructorRepeatChar() 
+	{ 
+		cString<1>& str01 = *(cString<1>*)"\0\0c"; 
+
+		EXPECT_TRUE(str01.length() == 0); 
+
+		cString<1>& str02 = *(cString<1>*)"\xA\0c"; 
+
+		EXPECT_TRUE(str02 != 0); 
+		EXPECT_TRUE(str02.length() == 10); 
+
+		return true; 
+	} 
+	bool testConstructorPointers() 
+	{ 
+		const cString<0> empty; 
+		char data[] = "a 16 char string"; 
+
+		cString<16> str01(data + sizeof(data) - 1); 
+
+		cString<16> str02(data[0]); 
+		EXPECT_TRUE(str02 == "a"); 
+
+		cString<16> str03(data + 2);
+		str03 = str03.substr(0, 16-2);
+		EXPECT_TRUE(str03 == "16 char string"); 
+
+		cString<16> str04(data + 15); 
+		str04 = str04.substr(0, 1);
+		EXPECT_TRUE(str04 == "g"); 
+
+		cString<16> str05(data + 16); 
+		EXPECT_TRUE(str05 == ""); 
+
+		return true; 
+	} 
+	bool testConstructorInvalidValues() 
+	{ 
+		const string empty; 
+		const cString<16> str01("a 16 char string"); 
+
+		EXPECT_TRUE(str01.length() == 16); 
+
+		return true; 
+	} 
+	bool testSize() 
+	{ 
+		cString<10> str01; 
+		EXPECT_TRUE(str01.length() == 0); 
+		EXPECT_TRUE(str01.length() == 0); 
+
+		str01 += "a string."; 
+
+		EXPECT_TRUE(str01.length() == 9); 
+		EXPECT_TRUE(str01.length() == 9); 
+
+		return true; 
+	} 
+	bool testCString() 
+	{ 
+		cString<10> str01; 
+		cString<1> str02; 
+
+		// Should point to the same empty string. 
+		EXPECT_TRUE(str01.c_str() == str01.operator const char *()); 
+		EXPECT_TRUE(!*str01); 
+
+		const char text[] = "a string"; 
+		str01 += text; 
+		EXPECT_TRUE(strcmp(str01.c_str(), text) == 0); 
+		EXPECT_TRUE(strcmp(str01.operator const char *(), text) == 0); 
+		EXPECT_TRUE(!!*str01); 
+
+		return true; 
+	} 
+	bool testAppend() 
+	{ 
+		cString<40> str1; 
+		const char *text = "You spin my head right round."; 
+
+		str1 += text; 
+		EXPECT_TRUE(str1 == text); 
+
+		str1 += " Flo Rida."; 
+		EXPECT_TRUE(str1 == "You spin my head right round. Flo Rida."); 
+
+		cString<40> str2; 
+		str2 += str1; 
+		EXPECT_TRUE(str2 == "You spin my head right round. Flo Rida."); 
+
+		cString<40> str3("You spin "); 
+		str3 += "my head right round."; 
+		EXPECT_TRUE(str3 == "You spin my head right round."); 
+
+		cString<40> str4("You spin "); 
+		cString<40> str5("my head right round."); 
+		str4 += str5; 
+		EXPECT_TRUE(str4 == "You spin my head right round."); 
+
+		cString<40> str6(""); 
+		cString<40> str7(""); 
+		str6 += str7; 
+		EXPECT_TRUE(str6 == ""); 
+
+		cString<40> str8; 
+		str8 += "a"; 
+		EXPECT_TRUE(str8 == "a"); 
+
+		const char more_text[] = {'l','a','d','y',' ','g','a','g','a'}; 
+
+		cString<50> str10; 
+		str10 += ""; 
+		EXPECT_TRUE(str10.length() == 0 ); 
+		str10 += text; 
+		EXPECT_TRUE(str10 == "You spin my head right round."); 
+
+		cString<50> str11; 
+		str11 = str10.substr(5,11);
+
+		EXPECT_TRUE(str11 == "pin my head"); 
+
+		return true; 
+	}
+	bool testAppendOperator() 
+	{ 
+		cString<50> str1; 
+		const char *text = "You spin my head right round."; 
+
+		str1 += text; 
+		EXPECT_TRUE(str1 == text); 
+
+		str1 += " Flo Rida."; 
+		EXPECT_TRUE(str1 == "You spin my head right round. Flo Rida."); 
+
+		cString<50> str2; 
+		str2 += str1; 
+		EXPECT_TRUE(str2 == "You spin my head right round. Flo Rida."); 
+
+		cString<50> str3("You spin "); 
+		str3 += "my head right round."; 
+		EXPECT_TRUE(str3 == "You spin my head right round."); 
+
+		cString<50> str4("You spin "); 
+		cString<50> str5("my head right round."); 
+		str4 += str5; 
+		EXPECT_TRUE(str4 == "You spin my head right round."); 
+
+		cString<50> str6(""); 
+		cString<50> str7(""); 
+		str6 += str7; 
+		EXPECT_TRUE(str6 == ""); 
+		EXPECT_TRUE(!*str6); 
+
+		cString<50> str8; 
+		str8 += "a"; 
+		EXPECT_TRUE(str8 == "a"); 
+
+		const char more_text[] = {'l','a','d','y',' ','g','a','g','a'}; 
+
+		cString<20> str9; 
+		for (size_t i = 0; i < sizeof(more_text); ++i) 
+		{ 
+			str9 += more_text[i]; 
+		} 
+		EXPECT_TRUE(str9 == "lady gaga"); 
+
+		str9 += (const char *)NULL; 
+		EXPECT_TRUE(str9 == "lady gaga"); 
+
+		return true; 
+	}
+	bool testConcat() 
+	{ 
+		cString<20> str01("The full"); 
+		cString<20> str02(" sentence."); 
+		cString<20> str03; 
+
+		str03 = str01 + str02; 
+		EXPECT_TRUE(str03 == "The full sentence."); 
+
+		str03 = str02 + str01; 
+		EXPECT_TRUE(str03 == " sentence.The full"); 
+
+
+		str03 = str01 + " sentence."; 
+		EXPECT_TRUE(str03 == "The full sentence."); 
+
+		str03 = "The full" + str02; 
+		EXPECT_TRUE(str03 == "The full sentence."); 
+
+		str03 = 'l' + str02; 
+		str03 = 'l' + str03; 
+		str03 = 'u' + str03; 
+		str03 = 'f' + str03; 
+		str03 = ' ' + str03; 
+		str03 = 'e' + str03; 
+		str03 = 'h' + str03; 
+		str03 = 'T' + str03; 
+		EXPECT_TRUE(str03 == "The full sentence."); 
+
+		str03 = "The full "; 
+		str03 = str03 + 's'; 
+		str03 = str03 + 'e'; 
+		str03 = str03 + 'n'; 
+		str03 = str03 + 't'; 
+		str03 = str03 + 'e'; 
+		str03 = str03 + 'n'; 
+		str03 = str03 + 'c'; 
+		str03 = str03 + 'e'; 
+		str03 = str03 + '.'; 
+		EXPECT_TRUE(str03 == "The full sentence."); 
+
+		// Check the new string buffer is not the same as the original one. 
+		cString<20> str04("left and"); 
+		cString<20> str05(" right"); 
+		cString<20> str06(str04 + str05); 
+
+		EXPECT_TRUE(str06 == "left and right"); 
+		EXPECT_TRUE(str06.c_str() != str04.c_str()); 
+		EXPECT_TRUE(str06.c_str() != str05.c_str()); 
+
+		str06 = str04 + str05; 
+		EXPECT_TRUE(str06 == "left and right"); 
+		EXPECT_TRUE(str06.c_str() != str04.c_str()); 
+		EXPECT_TRUE(str06.c_str() != str05.c_str()); 
+		return true; 
+	}
+	bool testAssignment() 
+	{ 
+		const char *literal = "Need to buy a full face helmet for Lilie."; 
+		const cString<50> str01 = literal; 
+
+		EXPECT_TRUE(str01.length() == strlen(literal)); 
+		EXPECT_TRUE(str01.length() == strlen(literal)); 
+		EXPECT_TRUE(str01 == literal); 
+
+		cString<40> str02; 
+
+		str02 = str01.substr(8, 33); 
+		EXPECT_TRUE(str02 == "buy a full face helmet for Lilie."); 
+
+		str02 = str01.substr(8,0);//.assign(str01, 8, 0); 
+		EXPECT_TRUE(str02 == ""); 
+
+		str02 = str01.substr(0, 7); 
+		EXPECT_TRUE(str02 == "Need to"); 
+
+		str02 = str01.substr(35,6);//.assign(str01, 35, 6); 
+		EXPECT_TRUE(str02 == "Lilie."); 
+
+
+		str02 = str01.c_str() + 35;//, 5); 
+		str02 = str02.substr(0,5);
+		EXPECT_TRUE(str02 == "Lilie"); 
+
+		cString<50> str03; 
+
+		str03 = literal; 
+		EXPECT_TRUE(str03 == "Need to buy a full face helmet for Lilie."); 
+
+		cString<50> str04; 
+
+		str04 = str03.c_str(); 
+		EXPECT_TRUE(str04 == "Need to buy a full face helmet for Lilie."); 
+
+		str04 = str03.c_str() + 5;
+		str04 = str04.substr(0, 10); 
+		EXPECT_TRUE(str04 == "to buy a f"); 
+
+		str04 = "noop"; 
+		str04 = NULL; 
+		EXPECT_TRUE(str04 == "noop"); 
+
+		str04 = str01.c_str() + str01.length() - 1; 
+		EXPECT_TRUE(str04 == "."); 
+
+		str04 = "unchanged"; 
+//		str04 = str01.c_str()+str01.length(); 
+		str04 = NULL;
+		EXPECT_TRUE(str04 == "unchanged"); 
+
+		return true; 
+	}
+	bool testCompare() 
+	{ 
+		cString<20> str01("bell helmet"); 
+		cString<20> str02("bell moto"); 
+		cString<20> str03("bell"); 
+		cString<20> str04("bell pants"); 
+		cString<20> str05; 
+
+		str05 = str01; 
+		// Compare with self. 
+		EXPECT_TRUE(str01 == str01); 
+		EXPECT_TRUE(!(str01 != str01)); 
+
+		EXPECT_TRUE(str01 == str05); 
+		EXPECT_TRUE(str05 == str01); 
+		EXPECT_TRUE(!(str01 != str05)); 
+		EXPECT_TRUE(!(str05 != str01)); 
+
+		EXPECT_TRUE(str01 != str02); 
+		EXPECT_TRUE(str01 != str03); 
+		EXPECT_TRUE(str01 != str04); 
+
+		// Compare with literals. 
+		EXPECT_TRUE(str01 == "bell helmet"); 
+		EXPECT_TRUE(!(str01 != "bell helmet")); 
+
+		// Compare with char array. 
+		char array[] = { 'a', ' ', 'b', 'u', 'g', '\0'}; 
+		str01 = "a bug"; 
+
+		EXPECT_TRUE(strcmp("a bug", "a bugg") < 0); 
+
+		char array2[] = { 'a', 'b', 'u', 'g', 'g' }; 
+		EXPECT_TRUE(str01 < array2); 
+
+		cString<1> str06; 
+		EXPECT_TRUE(str06 != NULL); 
+		return true; 
+	}
+	bool testAccessor() 
+	{ 
+		cString<10> str01 = "earmarks"; 
+
+		EXPECT_TRUE(str01[0] == 'e'); 
+		EXPECT_TRUE(str01[7] == 's'); 
+
+		str01[0] = 'E'; 
+		str01[7] = 'S'; 
+		EXPECT_TRUE(str01 == "EarmarkS"); 
+
+		return true; 
+	}
+	bool testFind() 
+	{ 
+		cString<30> haystack("one two three one two three"); 
+
+		// Don't die on null strings 
+		EXPECT_TRUE(haystack.find((char*)NULL) == string::npos); 
+		EXPECT_TRUE(haystack.find((char*)NULL, 10) == string::npos); 
+
+		// C strings. 
+		EXPECT_TRUE(haystack.find("one") == 0); 
+		EXPECT_TRUE(haystack.find("two") == 4); 
+		EXPECT_TRUE(haystack.find("t") == 4); 
+		EXPECT_TRUE(haystack.find("four") == string::npos); 
+		EXPECT_TRUE(haystack.find("one", string::npos) == string::npos); 
+
+		// with offset 
+		EXPECT_TRUE(haystack.find("one", 13) == 14); 
+		EXPECT_TRUE(haystack.find("one", 14) == 14); 
+		EXPECT_TRUE(haystack.find("one", 15) == string::npos); 
+		EXPECT_TRUE(haystack.find("e", haystack.length() - 1) == haystack.length() - 1); 
+		EXPECT_TRUE(haystack.find("e", haystack.length()) == string::npos); 
+		EXPECT_TRUE(haystack.find("one", string::npos) == string::npos); 
+
+		// std::string 
+		EXPECT_TRUE(haystack.find(cString<3>("one")) == 0); 
+		EXPECT_TRUE(haystack.find(cString<3>("two")) == 4); 
+		EXPECT_TRUE(haystack.find(cString<1>("t")) == 4); 
+		EXPECT_TRUE(haystack.find(cString<4>("four")) == string::npos); 
+		EXPECT_TRUE(haystack.find(cString<3>("one"), -1) == -1); 
+
+		// with offset 
+		EXPECT_TRUE(haystack.find(cString<3>("one"), 13) == 14); 
+		EXPECT_TRUE(haystack.find(cString<3>("one"), 14) == 14); 
+		EXPECT_TRUE(haystack.find(cString<3>("one"), 15) == string::npos); 
+		EXPECT_TRUE(haystack.find(cString<1>("e"), haystack.length() - 1) == haystack.length() - 1); 
+		EXPECT_TRUE(haystack.find(cString<1>("e"), haystack.length()) == string::npos); 
+		EXPECT_TRUE(haystack.find(cString<3>("one"), string::npos) == string::npos); 
+
+		// Emtpy string should be found at every position in a string except 
+		// past the end. 
+		EXPECT_TRUE(string().find("", 0) == 0); 
+		EXPECT_TRUE(string().find(string(), 0) == 0); 
+		EXPECT_TRUE(string().find(string(), 10) == string::npos); 
+
+		string foo = "foo"; 
+		EXPECT_TRUE(foo.find("", 0) == 0); 
+		EXPECT_TRUE(foo.find(string(), 0) == 0); 
+		EXPECT_TRUE(foo.find(string(""), 0) == 0); 
+
+		EXPECT_TRUE(foo.find("", 1) == 1); 
+		EXPECT_TRUE(foo.find(string(), 1) == 1); 
+		EXPECT_TRUE(foo.find(string(""), 1) == 1); 
+
+		EXPECT_TRUE(foo.find("", foo.length()) == foo.length()); 
+		EXPECT_TRUE(foo.find(string(), foo.length()) == foo.length()); 
+		EXPECT_TRUE(foo.find(string(""), foo.length()) == foo.length()); 
+
+		EXPECT_TRUE(foo.find("", foo.length() + 1) == string::npos); 
+		EXPECT_TRUE(foo.find(string(), foo.length() + 1) == string::npos); 
+		EXPECT_TRUE(foo.find(string(""), foo.length() + 1) == string::npos); 
+
+		// Find on an empty string a non empty one should fail 
+		EXPECT_TRUE(string().find("f", 0) == string::npos); 
+		EXPECT_TRUE(string().find(string("f"), 0) == string::npos); 
+		return true; 
+	}
+	bool testSubstr() 
+	{ 
+		const char literal[] = "basement jaxx"; 
+		const cString<20> str01(literal); 
+		cString<20> str02; 
+
+		str02 = str01.substr(0, 5); 
+		EXPECT_TRUE(str02 == "basem"); 
+
+		str02 = str01.substr(0, 8); 
+		EXPECT_TRUE(str02 == "basement"); 
+
+		str02 = str01.substr(0, string::npos); 
+		EXPECT_TRUE(str02 == "basement jaxx"); 
+
+		str02 = str01.substr(); 
+		EXPECT_TRUE(str02 == "basement jaxx"); 
+
+		str02 = str01.substr(9); 
+		EXPECT_TRUE(str02 == "jaxx"); 
+
+		str02 = str01.substr(9, string::npos); 
+		EXPECT_TRUE(str02 == "jaxx"); 
+		return true; 
+	}
+public:
+	Tester() {
+#define FAIL_UNLESS(a) a()
+		FAIL_UNLESS(testConstructorCString);
+		FAIL_UNLESS(testConstructorString);
+		FAIL_UNLESS(testConstructorRepeatChar);
+		FAIL_UNLESS(testConstructorPointers);
+		FAIL_UNLESS(testConstructorInvalidValues);
+		FAIL_UNLESS(testSize);
+		FAIL_UNLESS(testCString);
+		FAIL_UNLESS(testAppend);
+		FAIL_UNLESS(testAppendOperator);
+		FAIL_UNLESS(testConcat);
+		FAIL_UNLESS(testAssignment);
+		FAIL_UNLESS(testCompare);
+		FAIL_UNLESS(testAccessor);
+		FAIL_UNLESS(testFind);
+		FAIL_UNLESS(testSubstr);
+
+		FAIL_UNLESS(ownTests);
+	}
+	bool incrTest(char *oneP, unsigned char lastByteMem, unsigned char lastByte) {
+		unsigned char incr = *(oneP+0+11); // check rest of object end marker's low byte
+		for(int i=1;i<10;i++) { // 
+			if(*(unsigned char*)(oneP+i+11) - incr != i)
+				return false;
+		}
+		if((*(void**)(oneP+10+10) != oneP+10+10) || (lastByteMem != lastByte)) // check last object marker
+			return false;
+		return true;
+	}
+	bool ownTests() {
+		cString<10> one, two;
+		char *oneP = const_cast<char*>(one.c_str());
+		int res = memcmp(&one, &two, sizeof(cString<10>)); // empty strings are equal
+		if(res) return false;
+		*oneP = 'x'; // check mark end of string
+		one = "";
+		res = memcmp(&one, &two, sizeof(cString<10>)); // empty strings are equal
+		if(res) return false;
+		one = '1';
+		two = "1";
+		one = ""; // no change 4 empty string
+		res = memcmp(&one, &two, sizeof(cString<10>)); // empty strings are equal
+//	cString& operator =(const char* src)
+		cString<20> *space = new cString<20>;
+		char *spaceP = const_cast<char*>(space->c_str());
+		unsigned __int16 &spaceL = *(unsigned __int16*)space;
+		cString<23> _one2;
+		cString<10>& one2 = *(cString<10>*)&_one2;
+		oneP = const_cast<char*>(one2.c_str());
+		unsigned char& lastByte = *(unsigned char*)(oneP+10+10+4);
+		unsigned char lastByteMem = lastByte;
+		for(int i=1;i<20;i++) {
+			*(spaceP+i-1) = i+'0'-1;
+			*(spaceP+i) = 0;
+			*((void**)(oneP+i+1)) = oneP+i+1; // object end marker
+			one2 = spaceP;
+			spaceL = i<=10?i:10;
+			res = memcmp(&one2, space, 2+(i<=10?i:10));
+			res |= *((void**)(oneP+i+1)) != oneP+i+1;
+			if(res)
+				return false;
+		}
+		if(!incrTest(oneP, lastByteMem, lastByte))
+			return false;
+//	cString& operator +=(const char *src) { // "strcat"
+		one2 = "";
+		for(int i=1;i<20;i++) {
+			*(spaceP+i-1) = i+'0'-1;
+			*(spaceP+i) = 0;
+			*((void**)(oneP+i+1)) = oneP+i+1; // object end marker
+			one2 += spaceP+i-1;
+			spaceL = i<=10?i:10;
+			res = memcmp(&one2, space, 2+(i<=10?i:10));
+			res |= *((void**)(oneP+i+1)) != oneP+i+1;
+			if(res)
+				return false;
+		}
+		if(!incrTest(oneP, lastByteMem, lastByte))
+			return false;
+		one2 += "12345678901234567890";
+		one2 = "";
+		one2 += "12345678901234567890";
+		if(!incrTest(oneP, lastByteMem, lastByte))
+			return false;
+//	const cString& operator +=(char src) { // "strcat"
+		one2 = "";
+		lastByteMem = lastByte;
+		for(int i=1;i<20;i++) {
+			*(spaceP+i-1) = i+'0'-1;
+			*(spaceP+i) = 0;
+			*((void**)(oneP+i+1)) = oneP+i+1; // object end marker
+			one2 += char(i+'0'-1);
+			spaceL = i<=10?i:10;
+			res = memcmp(&one2, space, 2+(i<=10?i:10));
+			res |= *((void**)(oneP+i+1)) != oneP+i+1;
+			if(res)
+				return false;
+		}
+		if(!incrTest(oneP, lastByteMem, lastByte))
+			return false;
+		delete space;
+		return true;
+	}
+};
+Tester t;
+#undef TestingCstring
 #endif
