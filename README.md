@@ -17,4 +17,7 @@ Cage (port to VS 2008) using fonts created by XorPacker predecessor &amp; update
 <tr><th align="left" valign="top">gfxXorPacker.cpp</th><td>
 fntXorPacker row XOR applied to GFX fonts bitmap + test processing on all current fonts / Picopixel skipped (2B increase).
 </td></tr>
+<tr><th align="left" valign="top">KecalPort.cpp</th><td>
+PC port of tiny & simple ZX Spectrum Kecal/Hlas TTS, export 2 WAV, added analog wave modulation to simulate ULA output RC integration element.
+</td></tr>
 </tbody></table>
