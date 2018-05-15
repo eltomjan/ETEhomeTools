@@ -1,0 +1,39 @@
+<title>
+Teletext řídící stránka
+</title>
+<script>
+b=window.setInterval(onl,200);
+var a=window.open("http://www.ceskatelevize.cz/teletext/ct/?ver=TXT&page=100A",null,
+				  "status=yes,toolbar=no,menubar=no,location=no");
+function cls() {
+	window.clearInterval(b);
+	close();
+}
+function onl() {
+	//else if(a.document) if(a.document.readyState=="complete" || document.all.tags("PRE").length) 
+	if(a.closed) window.close();
+	else if(a.document) 
+	{
+		if(a.document.all.tags("PRE").length)
+		{
+			if(a.document.body.firstChild.tagName!="TABLE") {
+				a.focus();
+				document.body.innerHTML="Otevřeno, vybírám vlastní stránku."
+					c=a.document.all.tags("PRE")[0];
+				d='<table>';
+				//d+=c.parentElement.parentElement.outerHTML;
+				d+="<tr><td><pre>"+c.innerHTML+"</pre></td></tr>";
+				d+="<tr><td>"+c.parentElement.parentElement.nextSibling.outerHTML+"</td></tr>";
+				d+='</table>';
+				d+=a.document.forms.frTx.outerHTML;
+				a.window.document.execCommand("Stop");
+				a.document.body.innerHTML=d;
+				document.body.innerHTML="Hotovo."
+			}}
+	}
+}
+</script>
+<body onclose=cls()>
+Načítám teletextovou stránku v novém okně...
+Při ukončení uzavřete nejprve toto okno a pak až aktuální teletextovou stránku.
+</body>
