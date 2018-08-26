@@ -1,0 +1,73 @@
+﻿<html lang="en-US" lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <style>
+    * { font-size:64px}
+    th {
+	    position: relative;
+	    background-color:window;
+    }
+    td {
+	    text-align: right;
+    }
+    </style>
+    <script language="javascript" type="text/javascript">
+    var tabScroll,timeoutObj;
+
+    function scrollMe2() {
+	    clearTimeout(timeoutObj);
+	    t=tabScroll.firstElementChild;
+	    for(var d=tabScroll.scrollTop,d=d+(d?-2:0)+"px",b=0;b<1;b++)
+		    for(var c=t.rows[b],e=t.rows[b].cells.length,f=0;f<e;f++) c.cells[f].style.top=d
+    }
+    function scrollMe(d) {
+	    tabScroll=d;
+	    timeoutObj=window.setTimeout(scrollMe2,100); // optional slowdown
+    }
+    </script>
+    </head>
+  <body>
+    <span style="position: absolute; height:30vh; overflow-y:auto" onscroll="scrollMe(this)">
+      <table border=1 style="border-spacing: 0px">
+        <thead>
+          <tr >
+            <th>A</th>
+            <th>B</th>
+            <th>C</th>
+            <th>D</th>
+          </tr>
+        </thead>
+        <tfoot>
+          <tr>
+            <td colspan="4">===========</td>
+          </tr>
+        </tfoot>
+        <tbody>
+          <tr>
+            <td>34</td>
+            <td>987</td>
+            <td>12</td>
+            <td>986</td>
+          </tr>
+          <tr>
+            <td>34</td>
+            <td>987</td>
+            <td>12</td>
+            <td>986</td>
+          </tr>
+          <tr>
+            <td>34</td>
+            <td>987</td>
+            <td>12</td>
+            <td>986</td>
+          </tr>
+          <tr>
+            <td>34</td>
+            <td>987</td>
+            <td>12</td>
+            <td>986</td>
+          </tr>
+        </tbody>
+      </table>
+    </span>
+  </body>
+</html>
