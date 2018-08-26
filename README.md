@@ -20,4 +20,7 @@ fntXorPacker row XOR applied to GFX fonts bitmap + test processing on all curren
 <tr><th align="left" valign="top">KecalPort.cpp</th><td>
 PC port of tiny & simple ZX Spectrum Kecal/Hlas TTS, export 2 WAV, added analog wave modulation to simulate ULA output RC integration element.
 </td></tr>
+<tr><th align="left" valign="top">scrollTable.htm</th><td>
+Extracted from much bigger HTML5 IE/Chome/FF project.
+</td></tr>
 </tbody></table>
