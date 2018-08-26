@@ -10,7 +10,8 @@
 typedef unsigned __int16 U16;
 typedef __int16 I16;
 #else
-typedef uint16_t U16;
+#include <sys/types.h>
+typedef u_int16_t U16;
 typedef int16_t I16;
 #endif
 
@@ -25,7 +26,7 @@ public:
 		m_size = 0; *m_data = 0;
 	}
 	template<U16 c_maxSizeU>
-	cStringU (const cString<c_maxSizeU>& src) {
+	explicit cStringU (const cString<c_maxSizeU>& src) {
 		unsigned char *srcPtr = (unsigned char*)src.c_str();//(unsigned char *)(((char*)&src) + 2);
 		I16 maxSize = c_maxSize;
 		if(*srcPtr) encodeUtf((unsigned char *)m_data, srcPtr, maxSize); else *m_data=0;
@@ -120,7 +121,7 @@ public:
 		m_size = 0;
 	}
 	template<U16 T>
-	cString (const cString<T>& src) { // copy constructor
+	explicit cString (const cString<T>& src) { // copy constructor
 		if(src.length() > c_maxSize) {
 			memcpy(this, &src, &m_data[0] - (char*)this + c_maxSize);
 			m_data[c_maxSize] = 0;
@@ -276,6 +277,10 @@ public:
 		}
 		return *this;
 	}
+	cString& operator =(const cString& src) {
+		memcpy(this, &src, &m_data[0] - (char*)this + src.length() + 1);
+		return *this;
+	}
 	bool operator  <(cString& nd) const { return strcmp(m_data, nd.m_data) < 0; }
 	bool operator  >(cString& nd) const { return strcmp(m_data, nd.m_data) > 0; }
 	bool operator <=(cString& nd) const { return strcmp(m_data, nd.m_data) <= 0; }
@@ -310,6 +315,23 @@ public:
 		if(m_size <= pos)
 			return string::npos;
 		ptr = strchr(m_data + pos, chr);
+		if (!ptr)
+			return string::npos;
+
+		return ptr - m_data;
+	}
+	inline size_t find4test(const char *chr, size_t pos = 0, size_t len = -1) {
+		char* ptr;
+
+		if(!chr || m_size <= pos)
+			return string::npos;
+		if(len < 0) {
+			ptr = strstr(m_data + pos, chr);
+		} else {
+			if(memcmp(m_data + pos, chr, len) == 0) {
+				ptr = m_data;
+			} else ptr = NULL;
+		}
 		if (!ptr)
 			return string::npos;
 
@@ -429,8 +451,9 @@ private:
 		  1,1,0xC8,0x9A, 0xDE,
 			0
 		};
-		int prefLen,dataLen,pos=0;
+		int pos=0;
 		do {
+			int prefLen,dataLen;
 			prefLen = w2utf[pos++];
 			dataLen = w2utf[pos++];
 			if(!memcmp(*src,&w2utf[pos],prefLen)) { // compare prefix
@@ -635,7 +658,6 @@ class Tester {
 	} 
 	bool testConstructorInvalidValues() 
 	{ 
-		const string empty; 
 		const cString<16> str01("a 16 char string"); 
 
 		EXPECT_TRUE(str01.length() == 16); 
@@ -910,7 +932,7 @@ class Tester {
 		char array[] = { 'a', ' ', 'b', 'u', 'g', '\0'}; 
 		str01 = "a bug"; 
 
-		EXPECT_TRUE(strcmp("a bug", "a bugg") < 0); 
+//		EXPECT_TRUE(strcmp("a bug", "a bugg") < 0); 
 
 		char array2[] = { 'a', 'b', 'u', 'g', 'g' }; 
 		EXPECT_TRUE(str01 < array2); 
