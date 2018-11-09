@@ -34,6 +34,7 @@
             string val = "";
             int size = row.Length;
             size--;
+            int xPos = 0;
             for (int i = 0; i <= size; i++) // raw picture
             {
                 for (int j = 7; j >= 0; j--)
@@ -41,6 +42,9 @@
 // ─│┌┐└┘├┤┬┴┼═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬▀▄█▌▐░▒▓
                     if ((row[i] & (1 << j)) != 0) val += "█";
                     else val += "░";
+                    xPos++;
+                    if(xPos >= Width)
+                        break;
                 }
             }
 
@@ -52,6 +56,17 @@
                 else val += "▒";
             }
             return val;
+        }
+
+        public int getNZCount()
+        {
+            int nZCount = 0;
+            foreach (var b in row)
+            {
+                if (b > 0)
+                    nZCount++;
+            }
+            return nZCount;
         }
     }
 }

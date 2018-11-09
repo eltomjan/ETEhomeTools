@@ -9,6 +9,7 @@ namespace XorPack
 
         public void UnXor() // Direction Up -> Down
         {
+            if(box == null) return;
             int height = box.Length;
             int width = box[0].Row.Length;
             box[0].UpdateNonZeros();
@@ -26,6 +27,7 @@ namespace XorPack
 
         public void Xor() // Direction Up <- Down
         {
+            if(box == null) return;
             int height = box.Length;
             int width = box[0].Row.Length;
             for (int j = height - 1; j > 0; j--) // last -> 1
