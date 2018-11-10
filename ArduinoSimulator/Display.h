@@ -17,7 +17,7 @@
 
 	#include "SPI.h"
 //	#include "_GFX.h"
-	#include "_ILI9340.h"
+	#include "Adafruit_ILI9340\Adafruit_ILI9340.h"
 	
 void showScreen(char round);
 void to_string(char *output, int i, char size);

@@ -42,7 +42,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\Arduino;..\hardware\arduino\avr\libraries\SPI\src\;..\hardware\arduino\avr\cores\arduino\"
+				AdditionalIncludeDirectories=".\Arduino;&quot;.\Adafruit-GFX-Library&quot;;..\hardware\arduino\avr\libraries\SPI\src\;..\hardware\arduino\avr\cores\arduino\"
 				PreprocessorDefinitions="WIN32;_DEBUG"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
@@ -197,11 +197,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\_ILI9340.cpp"
+				RelativePath=".\Adafruit_ILI9340\Adafruit_ILI9340.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Arduino\Adafruit_GFX.cpp"
+				RelativePath=".\Adafruit-GFX-Library\Adafruit_GFX.cpp"
 				>
 			</File>
 			<File
@@ -235,11 +235,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\_ILI9340.h"
+				RelativePath=".\Adafruit-GFX-Library\Adafruit_GFX.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Arduino\Adafruit_GFX.h"
+				RelativePath=".\Adafruit_ILI9340\Adafruit_ILI9340.h"
 				>
 			</File>
 			<File

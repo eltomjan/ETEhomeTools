@@ -277,23 +277,7 @@ typedef uint64_t  prog_uint64_t PROGMEM;
     __result;                   \
 }))
 
-#define __LPM_word_classic__(addr)          \
-(__extension__({                            \
-    uint16_t __addr16 = (uint16_t)(addr);   \
-    uint16_t __result;                      \
-    __asm__                                 \
-    (                                       \
-        "lpm"           "\n\t"              \
-        "mov %A0, r0"   "\n\t"              \
-        "adiw r30, 1"   "\n\t"              \
-        "lpm"           "\n\t"              \
-        "mov %B0, r0"   "\n\t"              \
-        : "=r" (__result), "=z" (__addr16)  \
-        : "1" (__addr16)                    \
-        : "r0"                              \
-    );                                      \
-    __result;                               \
-}))
+#define __LPM_word_classic__(addr)          *(addr)
 
 #define __LPM_word_enhanced__(addr)         \
 (__extension__({                            \
@@ -309,29 +293,7 @@ typedef uint64_t  prog_uint64_t PROGMEM;
     __result;                               \
 }))
 
-#define __LPM_dword_classic__(addr)         \
-(__extension__({                            \
-    uint16_t __addr16 = (uint16_t)(addr);   \
-    uint32_t __result;                      \
-    __asm__                                 \
-    (                                       \
-        "lpm"           "\n\t"              \
-        "mov %A0, r0"   "\n\t"              \
-        "adiw r30, 1"   "\n\t"              \
-        "lpm"           "\n\t"              \
-        "mov %B0, r0"   "\n\t"              \
-        "adiw r30, 1"   "\n\t"              \
-        "lpm"           "\n\t"              \
-        "mov %C0, r0"   "\n\t"              \
-        "adiw r30, 1"   "\n\t"              \
-        "lpm"           "\n\t"              \
-        "mov %D0, r0"   "\n\t"              \
-        : "=r" (__result), "=z" (__addr16)  \
-        : "1" (__addr16)                    \
-        : "r0"                              \
-    );                                      \
-    __result;                               \
-}))
+#define __LPM_dword_classic__(addr)         addr
 
 #define __LPM_dword_enhanced__(addr)        \
 (__extension__({                            \
@@ -416,7 +378,7 @@ typedef uint64_t  prog_uint64_t PROGMEM;
     \note The address is a byte address. 
     The address is in the program space. */
 
-#define pgm_read_word_near(address_short) __LPM_word((uint16_t)(address_short))
+#define pgm_read_word_near(address_short) __LPM_word((uint16_t*)(address_short))
 
 /** \ingroup avr_pgmspace
     \def pgm_read_dword_near(address_short)

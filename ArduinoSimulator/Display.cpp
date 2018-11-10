@@ -13,7 +13,7 @@ extern const uint8_t Font_big[];
 extern const uint8_t Font_medium[];
 extern const uint8_t Font_symbol[]; 
 
-_ILI9340 tft = _ILI9340(_cs, _dc, _rst);
+Adafruit_ILI9340 tft = Adafruit_ILI9340(_cs, _dc, _rst);
 
 #define BG_COLOR DARK_GREEN
 
