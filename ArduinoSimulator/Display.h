@@ -16,7 +16,7 @@
 #define _FP_DISPLAY_H_
 
 	#include "SPI.h"
-	#include "_GFX.h"
+//	#include "_GFX.h"
 	#include "_ILI9340.h"
 	
 void showScreen(char round);

@@ -1,14 +1,14 @@
 using namespace System::Drawing;
 #ifndef _ADAFRUIT_ILI9340H_
 #define _ADAFRUIT_ILI9340H_
-#define ARDUINO 99
+#define ARDUINO 100
 #if ARDUINO >= 100
 #include "Arduino.h"
 #include "Print.h"
 #else
 #include "WProgram.h"
 #endif
-#include "_GFX.h"
+#include "Adafruit_GFX.h"
 
 #if defined(__SAM3X8E__)
 #include <include/pio.h>
@@ -142,8 +142,8 @@ void dummyclock(void);
     commandList(uint8_t *addr);
   uint8_t spiread(void);
 
-#if ARDUINO < 100
-  virtual size_t writeX(uint8_t);
+#if ARDUINO >= 100
+  virtual size_t write(uint8_t);
 #else
   virtual void   write(uint8_t);
 #endif

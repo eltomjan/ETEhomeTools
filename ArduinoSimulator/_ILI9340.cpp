@@ -26,14 +26,14 @@ using namespace System::Drawing;
 
 // Constructor when using software SPI. All output pins are configurable.
 _ILI9340::_ILI9340(uint8_t cs, uint8_t dc, uint8_t mosi,
-								   uint8_t sclk, uint8_t rst, uint8_t miso) /*: Adafrui_GFX()*/ { //ILI9340_TFTWIDTH, ILI9340_TFTHEIGHT) {
+								   uint8_t sclk, uint8_t rst, uint8_t miso) : Adafruit_GFX(ILI9340_TFTWIDTH, ILI9340_TFTHEIGHT) {
 	m_proportional = true;
 }
 
 
 // Constructor when using hardware SPI. Faster, but must use SPI pins
 // specific to each board type (e.g. 11,13 for Uno, 51,52 for Mega, etc.)
-_ILI9340::_ILI9340(uint8_t cs, uint8_t dc, uint8_t rst) : Adafruit_GFX() { //ILI9340_TFTWIDTH, ILI9340_TFTHEIGHT) {
+_ILI9340::_ILI9340(uint8_t cs, uint8_t dc, uint8_t rst) : Adafruit_GFX(ILI9340_TFTWIDTH, ILI9340_TFTHEIGHT) {
 
 	m_proportional = true;
 }
@@ -68,8 +68,8 @@ void _ILI9340::begin(void) {
 
 void _ILI9340::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1,
  uint16_t y1) {
-	 int X0 = x0 + corner_x, Y0 = y0 + corner_y,
-		 X1 = x1 - corner_x, Y1 = y1 - corner_y;
+	 int X0 = x0, Y0 = y0,
+		 X1 = x1, Y1 = y1;
 
   writecommand(ILI9340_CASET); // Column addr set
   writedata(X0 >> 8);
@@ -292,22 +292,22 @@ uint8_t _ILI9340::spiread(void) {
    return r;
 }
 
-#if ARDUINO < 100
-size_t _ILI9340::writeX(uint8_t c) {
+#if ARDUINO >= 100
+size_t _ILI9340::write(uint8_t c) {
 #else
 void _ILI9340::write(uint8_t c) {
 #endif
 	int charWidth;
   if (c == '\n') {
-	const unsigned char* begin = m_font;
-	unsigned char width = pgm_read_byte(begin+3), height = pgm_read_byte(begin+4);
+	const unsigned char* begin = 0;//m_font;
+	unsigned char height = 8;
     cursor_y += height;
     cursor_x = 0;
   } else if (c == '\r') {
     // skip em
   } else {
 	charWidth = cursor_x;
-    drawChar(cursor_x + corner_x, cursor_y + corner_y, c, textcolor, textbgcolor, textsize);
+    drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
 	if(!m_proportional) {
 		cursor_x += textsize*6;
 		if(!textsize) cursor_x += 6;
@@ -317,9 +317,10 @@ void _ILI9340::write(uint8_t c) {
       cursor_x = 0;
     }
   }
-	if(!m_proportional)
+/*	if(!m_proportional)
 		return 1;
-	else return charWidth;
+	else return charWidth;*/
+  return 1;
 }
 
 // draw a character
@@ -333,7 +334,9 @@ void _ILI9340::drawChar(int16_t x, int16_t y, unsigned char c,
      ((y + 12 * size - 1) < 0))  // Clip top
     if(size) return;
 
-	if(!size) {
+	/*if(!size)*/ {
+		m_proportional = false;
+		size = 0;
 	  for (int8_t i=0; i<6; i++ ) {
 		uint8_t line;
 		if (i == 5) 
@@ -363,138 +366,5 @@ void _ILI9340::drawChar(int16_t x, int16_t y, unsigned char c,
 	  }
 	  return;
 	}
-	c-='!';
-	const unsigned char* begin = m_font;
-	unsigned char chars = pgm_read_byte(begin+2), width = pgm_read_byte(begin+3), height = pgm_read_byte(begin+4);
-	if(c==255) {
-		fillRect(x, y, width*8, height, bg);
-		if(m_proportional) cursor_x += width*8*5/8;
-		return;
-	}
-	const unsigned char* rowTabIdx = begin + 5;
-	const unsigned char* rowCollTabIdx = begin + 5 + ((chars*height+7)>>3); // 423 pro 94*36/8
-	const unsigned char* charDataTabIdx = rowCollTabIdx + pgm_read_byte(begin+1) + (pgm_read_byte(begin)<<8);
-	int skipRows = c*height;
-	unsigned char byteRows, byteColls = pgm_read_byte(rowCollTabIdx);
-	rowCollTabIdx++;
-	unsigned char rowTabMask;
-	unsigned char rowCollTabMask = 128;
-	rowTabMask = 128;
-	byteRows = pgm_read_byte(rowTabIdx++);
-	while(skipRows--) {
-		if(byteRows & rowTabMask) {
-			for(char i=0;i<width;i++) {
-				if(byteColls & rowCollTabMask) charDataTabIdx++;
-				rowCollTabMask >>= 1;
-				if(!rowCollTabMask) {
-					rowCollTabMask = 128;
-					byteColls = pgm_read_byte(rowCollTabIdx);
-					rowCollTabIdx++;
-				}
-			}
-		}
-		rowTabMask >>= 1;
-		if(!rowTabMask) {
-			rowTabMask = 128;
-			byteRows = pgm_read_byte(rowTabIdx);
-			rowTabIdx++;
-		}
-	}
-	unsigned char *dataBuf = new uint8_t[height*width];
-	memset(dataBuf,0,height*width);
-	char line = 0;
-	for(char j=0;j<height;j++) { // read data
-		if(byteRows & rowTabMask) {
-			for(char i=0;i<width;i++) {
-				if(byteColls & rowCollTabMask) { dataBuf[j*width+i] = pgm_read_byte(charDataTabIdx); charDataTabIdx++; }
-				rowCollTabMask >>= 1;
-				if(!rowCollTabMask) {
-					rowCollTabMask = 128;
-					byteColls = pgm_read_byte(rowCollTabIdx);
-					rowCollTabIdx++;
-				}
-			}
-		}
-		rowTabMask >>= 1;
-		if(!rowTabMask) {
-			rowTabMask = 128;
-			byteRows = pgm_read_byte(rowTabIdx);
-			rowTabIdx++;
-		}
-	}
-//	std::string chr0, chr1;
-	unsigned int b;
-	for(char j=0;j<height;j++) { // unxor data
-		b=0; // optional row XOR >> 1 decoding
-		for(char i=0;i<width;i++) {
-			if(b&1) b = 128; else b = 0;
-			b ^= dataBuf[j*width+i];
-			// 7 76 65 54 43 32 21 10 ... 07
-			//   7  76 65 54 43 32 21 ... 07
-			// 7  6 75 64 53 42 31 20
-			b ^= (b >> 1);
-			// 7  6 75 64 53 42 31 20
-			//      7  6  75 64 53 42
-			// 7  6  5  4 73 62 51 40
-			b ^= (b >> 2);
-			// 7  6  5  4 73 62 51 40
-			//            7  6  5  4
-			// 7  6  5  4  3  2  1  0 ...  0^07=7
-			b ^= (b >> 4);
-			dataBuf[j*width+i] = b;
-		} // optional row XOR >> 1 decoding
-		if(j) for(char i=0;i<width;i++) {
-			int mask=128, dato=dataBuf[j*width+i];
-			while(mask) {
-//				chr0 += (dato & mask)?'X':' ';
-				mask >>= 1;
-			}
-			dataBuf[j*width+i] ^= dataBuf[(j-1)*width+i];
-			mask=128;
-			dato=dataBuf[j*width+i];
-			while(mask) {
-//				chr1 += (dato & mask)?'X':' ';
-				mask >>= 1;
-			}
-		}
-//		chr0 +='\n';
-//		chr1 +='\n';
-	} // unxor data
-//	int sums[,result;
-	if(size == 2) {
-/*		for(char j=0;j<height-1;j+=2) { // unxor data
-			for(char i=0;i<width;i++) {
-				sum = 0,result = 0;
-				for(int t=0;t<8;t++) {
-					dataBuf[j*width+i]
-				}
-			}
-		}
-*/	}
-	char skipLeft = 0, realWidth = width*8-1;
-	if(m_proportional) {
-		unsigned char *rowOr = new uint8_t[width];
-		memset(rowOr, 0, width);
-		for(char j=0;j<height-1;j++) { // or data
-			for(char i=0;i<width;i++) {
-				rowOr[i] |= dataBuf[j*3+i];
-			}
-		}
-		while((skipLeft < realWidth) && !(rowOr[(skipLeft>>3)] & (128>>(skipLeft&7))))  skipLeft++;
-		while(!(rowOr[(realWidth>>3)] & (128>>(realWidth&7))))  realWidth--;
-		delete[] rowOr;
-		cursor_x += realWidth - skipLeft + 4;
-
-		unsigned char *rowPtr = dataBuf;
-		skipLeft--;
-		if(skipLeft > 0) for(char j=0;j<height;j++) { // or data
-			for(char i=0;i<width-(j==height-1);i++) {
-				*rowPtr++ <<= skipLeft;
-				*(rowPtr-1) |= *rowPtr>>(8-skipLeft);
-			}
-		}
-	}
-	drawBitmap(x,y,dataBuf,width*8,height,color,bg);
-	delete[] dataBuf;
 	return;
 }
