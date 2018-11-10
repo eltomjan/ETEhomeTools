@@ -55,12 +55,17 @@ namespace CSharpWithVSCode.ConsoleApp
                 //     zerosHalf += b.countHalfByte(); // 5171
                 // }
                 string[] dataRowsX = b.getASCII();
-                bitSize = b.getFixedBitSize(-1, -1);
                 if(b.box != null) {
+                    bitSize = b.getFixedBitSize(-1, -1, false);
                     int commonSize = bitSize;
                     font += b.box[0].Width + "x" + b.box.Length + " byte width size:" + bitSize;
                     dynamicSize += bitSize;
-                    bitSize = b.getFixedBitSize(maxW, maxH);
+                    bitSize = b.getFixedBitSize(maxW, maxH, false);
+                    /*b.UnXor();
+                    CharBox bR = new CharBox(b);
+                    b.Xor();
+                    bR.Xor();
+                    bitSize = bR.getFixedBitSize(-1,-1);*/
                     font += " fixed size:" + bitSize;
                     fixedSize += bitSize;
                     bitSize = b.getGFXbitSize();

@@ -97,6 +97,28 @@ namespace XorPack
             }
         }
 
+        // Rotate
+        public CharBox(CharBox bR)
+        {
+            m_step = 1;
+            m_height = bR.box[0].Width;
+            int width = bR.box.Length;
+            box = new CharRow[m_height];
+            for (int i = 0; i < m_height; i++)
+            {
+                int bWidth = (width/8);
+                if((width&7) > 0) bWidth++;
+                box[i] = new CharRow(bWidth);
+                for (int j = 0; j < width; j++)
+                {
+                    if (bR.box[j].getBit(i))
+                    {
+                        box[i].setBit(j);
+                    }
+                }
+            }
+        }
+
         public int bitSize()
         {
             int size = box.Length;
@@ -181,6 +203,48 @@ namespace XorPack
             return retVal;
         }
 
+        public byte[] getGFXmapR(int width, int height)
+        {
+            if (m_height == 0) return null;
+            int maxWidth = box[0].Width;
+            int size = height * width;
+            size = (size / 8) + Convert.ToByte((size & 7) > 0);
+            byte[] retVal = new byte[size];
+            int outPos = 0;
+            Byte mask = 128;
+            int checkedStep = m_step;
+            if (((height & 1) != 0) && m_step == 2) checkedStep = 1; // ignore - will miss last even row
+            int checkedWidth = width * checkedStep;
+            maxWidth *= checkedStep;
+            for (int y = 0; y < checkedWidth; y += checkedStep)
+            {
+                for (int x = 0; x < height; x++)
+                {
+                    if ((y < maxWidth) && (x < m_height))
+                    {
+                        if (box[x].getBit(y))
+                        {
+                            retVal[outPos] |= mask;
+                        }
+                    }
+                    if (mask > 1)
+                    {
+                        mask >>= 1;
+                    }
+                    else
+                    {
+                        mask = 128;
+                        outPos++;
+                    }
+                }
+            }
+            if (size - outPos > 1)
+            {
+                Console.WriteLine("Error in size ?");
+            }
+            return retVal;
+        }
+
         /// <summary>
         /// Debug info
         /// </summary>
@@ -201,12 +265,13 @@ namespace XorPack
             return val.Split('\n');
         }
 
-        public int getDynamicBitSize() {
+        public int getDynamicBitSize(bool reverse)
+        {
             if(box == null)
                 return 0;
-            return getFixedBitSize(box[0].Width, m_height);
+            return getFixedBitSize(box[0].Width, m_height, reverse);
         }
-        public int getFixedBitSize(int w, int h)
+        public int getFixedBitSize(int w, int h, bool reverse)
         {
             int retVal = 0;
             if(w + h == -2) {
@@ -222,7 +287,13 @@ namespace XorPack
                 return retVal;
             } else {
                 if(box == null) return 0;
-                Byte[] bitArray = getGFXmap(w,h);
+                Byte[] bitArray;
+                if (reverse) bitArray = getGFXmapR(w, h); else bitArray = getGFXmap(w, h);
+                /*String bitArray2 = encode(bitArray);
+                String bitArray3 = decode(bitArray2);
+                int size = bitArray3.Length;
+                if ((size & 7) > 0) return (size / 8) + 1; else return (size / 8);
+                */
                 int size = bitArray.Length;
                 int c=0;
                 for(int i=0;i<size;i++) {
