@@ -370,7 +370,7 @@ typedef uint64_t  prog_uint64_t PROGMEM;
     The address is in the program space. */
 
 //#define pgm_read_byte_near(address_short) __LPM((uint16_t)(address_short))
-#define pgm_read_byte_near(address_short) *(address_short)
+#define pgm_read_byte_near(address_short) (*address_short)
 
 /** \ingroup avr_pgmspace
     \def pgm_read_word_near(address_short)
@@ -382,12 +382,12 @@ typedef uint64_t  prog_uint64_t PROGMEM;
 
 /** \ingroup avr_pgmspace
     \def pgm_read_dword_near(address_short)
-    Read a double word from the program space with a 16-bit (near) address. 
+    Read a double word from the program space with a 16-bit (near) address. No truncation in x32+ system...
     \note The address is a byte address. 
     The address is in the program space. */
 
 #define pgm_read_dword_near(address_short) \
-    __LPM_dword((uint16_t)(address_short))
+    __LPM_dword(address_short)
 
 /** \ingroup avr_pgmspace
     \def pgm_read_float_near(address_short)

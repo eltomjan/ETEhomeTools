@@ -35,7 +35,8 @@
 //     -felide-constructors
 //     -std=c++0x
 
-class __FlashStringHelper;
+// Author did not care about ? warning LNK4248: unresolved typeref token (01000010) for '__FlashStringHelper'; image may not run
+class __FlashStringHelper { char *str; };
 #define F(string_literal) (reinterpret_cast<const __FlashStringHelper *>(PSTR(string_literal)))
 
 // An inherited class for holding the result of a concatenation.  These

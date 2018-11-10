@@ -73,9 +73,9 @@ void showScreen(char round) {
 	tft.setTextColor(yellow,BG_COLOR);
 	tft.setTextSize(4);
 	tft.setTextColor(green,BG_COLOR);
-//#include "FreeSerifItalic24pt7b.h"
+#include "FreeSerifItalic24pt7b.h"
 	tft.setTextSize(1);
-//	tft.setFont(&FreeSerifItalic24pt7b);
+	tft.setFont(&FreeSerifItalic24pt7b);
 	tft.println("");
 	tft.println("!Ubuntu font");
 	tft.println("Arduino Simula-\ntor demo");

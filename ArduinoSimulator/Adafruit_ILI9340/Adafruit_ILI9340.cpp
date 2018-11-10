@@ -127,15 +127,6 @@ void Adafruit_ILI9340::drawFastVLine(int16_t x, int16_t y, int16_t h,
     h = _height-y;
 
   for(int j=y;j<y+h-1;j++) drawPixel(x,j,color);
-  return;
-  setAddrWindow(x, y, x, y+h-1);
-
-  uint8_t hi = color >> 8, lo = color;
-
-  while (h--) {
-    spiwrite(hi);
-    spiwrite(lo);
-  }
 }
 
 
@@ -216,18 +207,8 @@ void Adafruit_ILI9340::invertDisplay(boolean i) {}
 ////////// stuff not actively being used, but kept for posterity
 
 
-uint8_t Adafruit_ILI9340::spiread(void) {
-  uint8_t r = 0;
-  return r;
-}
+uint8_t Adafruit_ILI9340::spiread(void) { return 0; }
 
- uint8_t Adafruit_ILI9340::readdata(void) {
-   uint8_t r = spiread();
-   return r;
-}
- 
+ uint8_t Adafruit_ILI9340::readdata(void) { return 0; } 
 
- uint8_t Adafruit_ILI9340::readcommand8(uint8_t c) {
-   uint8_t r = spiread();
-   return r;
-}
+ uint8_t Adafruit_ILI9340::readcommand8(uint8_t c) { return 0; }
