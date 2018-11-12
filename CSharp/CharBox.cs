@@ -259,8 +259,8 @@ namespace XorPack
             int size = box.Length;
             for (int i = 0; i < size; i++) // raw picture
             {
+                if(i > 0) val += '\n';
                 val += box[i].ToString();
-                val += '\n';
             }
             return val.Split('\n');
         }
@@ -271,19 +271,101 @@ namespace XorPack
                 return 0;
             return getFixedBitSize(box[0].Width, m_height, reverse);
         }
+
+        public static int maxZeros = 0;
+        public int[] prepareEncoding(int w, int h, out Byte zeroNoSize, out int zeroBlocks, out int ones) {
+            int[] bits = getBitsNr(getGFXmap());
+            int min = 0;
+            ones = 0; zeroBlocks = 0;;
+            for(int i=0;i<bits[0];i++) {
+                if(bits[i+1] < min) {
+                    min = bits[i+1];
+                }
+                if(bits[i+1] < -1) zeroBlocks++; // 1 zero not encoded
+                else ones += bits[i+1];
+            }
+            zeroNoSize = (Byte)(Math.Log(-min-1)/Math.Log(2)+0.99); // bits to encode max zero #
+            if(maxZeros < -min) maxZeros = -min;
+            System.Array.Resize(ref bits, bits[0] + 1);
+            return bits;
+        }
+        public String getPackedStream(int w, int h, bool decorated) {
+            String retVal;
+            Byte zeroNoSize;
+            int zeroBlocks, ones;
+            int[] bits = prepareEncoding(w,h, out zeroNoSize, out zeroBlocks, out ones);
+            retVal = Convert.ToString(zeroNoSize, 2).PadLeft(4, '0'); // bit size 4 # of 0-s
+            if(decorated) retVal += ' ';
+            for(int i=0;i<bits[0];i++) {
+                int block = bits[i+1];
+                if(block > 0) {
+                    retVal += new String('1', block); // recreate 1s
+                } else if (block < -1) {
+                    if(decorated) retVal += ' ';
+                    retVal += Convert.ToString(-block-2, 2).PadLeft(zeroNoSize + 2, '0'); // 00#ofzeros
+                    if(decorated) retVal += "*0 ";
+                } else if(block == -1) {
+                    retVal += '0'; // 1 zero
+                } else throw new Exception("Bad repeat #");
+            }
+            return retVal;
+        }
+        public String decodeStringStream(String packed)  {
+            int width = box[0].Width;
+            String unpackedStream = "";
+            int pos = 4;
+            Byte zeroNoSize = Convert.ToByte(packed.Substring(0,pos), 2);
+            String debug = getPackedStream(box[0].Width, box.Length, true) + Environment.NewLine +
+                "Zeros # has " + zeroNoSize + "b (+2):";
+            for(;pos<packed.Length;pos++) {
+                if(packed[pos] == '1') {
+                    unpackedStream += '1';
+                    debug += "1" + Environment.NewLine;
+                } else if(packed[pos] == '0') {
+                    if((packed.Length > (pos + 1)) && (packed[pos+1] == '0')) {
+                        pos += 2; // skip compression prefix
+                        UInt16 zeroNo = Convert.ToUInt16(packed.Substring(pos, zeroNoSize), 2);
+                        zeroNo += 2;
+                        unpackedStream += new String('0', zeroNo);
+                        pos += zeroNoSize - 1;
+                        debug += zeroNo + "x 0" + Environment.NewLine;
+                    } else {
+                        unpackedStream += '0';
+                        debug += "0" + Environment.NewLine;
+                    }
+                }
+            }
+            String[] orig = getASCII();
+            String transl = "";
+            foreach(var r in orig) {
+                transl += r.Substring(0, width).Replace('░', '0').Replace('█', '1') + Environment.NewLine;
+            }
+            String retVal = "";
+            for(int i=0;i<unpackedStream.Length;i+=width) {
+                if(i+width <= unpackedStream.Length) {
+                    retVal += unpackedStream.Substring(i, width) + Environment.NewLine;
+                } else {
+                    retVal += unpackedStream.Substring(i) + '!' + Environment.NewLine;
+                }
+            }
+            if(transl != retVal) {
+                throw new Exception("Decode error");
+            }
+            return /*retVal +*/ debug;
+        }
         public int getFixedBitSize(int w, int h, bool reverse)
         {
             int retVal = 0;
             if(w + h == -2) {
-                h = m_height;
-                if(h == 0) return 0;
-                int byteSize = box[0].Row.Length * h;
-                for(int y=0; y<box.Length; y++) {
-                    retVal += box[y].getNZCount();
-                }
-                retVal += byteSize / 8;
-                if((byteSize & 7) > 0)
-                    retVal++;
+                Byte zeroNoSize;
+                int zeroBlocks, ones;
+                prepareEncoding(w,h, out zeroNoSize, out zeroBlocks, out ones);
+                retVal = 2 + zeroNoSize; // 2 zeros & #
+                retVal *= zeroBlocks; // 1b 0 + #
+                ones += retVal;
+                ones += 4; // 4bits for zero #s size
+                retVal = ones / 8;
+                if((ones%8) > 0) retVal++;
                 return retVal;
             } else {
                 if(box == null) return 0;

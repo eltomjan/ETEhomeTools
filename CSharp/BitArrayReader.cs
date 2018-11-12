@@ -19,15 +19,17 @@ namespace XorPack
             this.pos = pos;
         }
 
-        public byte getBit(int pos)
+        public Byte? getBit(int pos)
         {
+            if((pos/8) > srcBuf.Length)
+                return null;
             posInside = pos;
             mask = (byte)(1 << (7 - (pos & 7)));
             current = (byte)(srcBuf[this.pos + (int)posInside]);
             return (byte)(current & mask);
         }
 
-        public byte? getNextBit()
+        public Byte? getNextBit()
         {
             if (current == null)
                 return null;
@@ -35,6 +37,8 @@ namespace XorPack
             if(mask == 0) {
                 mask = 128;
                 posInside++;
+                if(posInside >= srcBuf.Length)
+                    return null;
                 current = srcBuf[this.pos + (int)posInside];
             }
             return (byte)(current & mask);

@@ -85,13 +85,15 @@ namespace CSharpWithVSCode.ConsoleApp
                 //     }
                 // }
                     charData = "";
-                    if(dataRows != null) for(int idx=0;idx<dataRows.Length;idx++) {
+                    if(dataRows != null) for(int idx=0;idx<dataRows.Length-1;idx++) {
                         charData += dataRows[idx] + "|" + dataRowsX[idx] + Environment.NewLine;
                     }
+                    charData += b.decodeStringStream(b.getPackedStream(b.box[0].Width, b.box.Length, false));
                     //GFXsquareSize += bitSize;
                     font += Environment.NewLine + charData + Environment.NewLine;
                 }
             }
+            //CharBox.maxZeros;
             font += "Chars: " + chars + " bits: " + fontBitSize + Environment.NewLine +
             "Max X * Y: " + maxW + "x" + maxH + " bits " + maxW * maxH * chars + " " + Perc(fontBitSize, maxW * maxH * chars) + "% of fixed" + Environment.NewLine +
             "Byte width xored data size:" + dynamicSize + " fixed(" + maxW + "," + maxH + "):" + fixedSize + " GFX size: " + GFXsize +

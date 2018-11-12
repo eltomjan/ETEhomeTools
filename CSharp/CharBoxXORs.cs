@@ -42,10 +42,84 @@ namespace XorPack
             }
         }
 
+        public int[] getBitsNr(Byte[] bitArray) {
+            int[] bitArrayOut = new int[bitArray.Length*8];
+            BitArrayReader br = new BitArrayReader(bitArray, 0);
+            Byte? bit, last = null;
+            bit = br.getBit(0);
+            last = bit;
+            int zeros = 0, nonZeros = 0;
+            int outPos = 1;
+            int bitSize = box[0].Width * box.Length;
+            while (true) {
+                if((bitSize > 1) && ((bit == last) || ((bit > 0) && (last > 0)))) {
+                    if(bit == 0) {
+                        zeros++;
+                    } else {
+                        nonZeros++;
+                    }
+                    //bitSize--;
+                } else {
+                    if(last == 0) {
+                        if(zeros > bitSize)
+                            zeros = bitSize;
+                        bitSize -= zeros;
+                        bitArrayOut[outPos++] = -zeros;
+                        bitArrayOut[0]++;
+                        zeros = 1;
+                        nonZeros = 1;
+                    } else {
+                        if(nonZeros > bitSize) nonZeros = bitSize;
+                        bitSize -= nonZeros;
+                        bitArrayOut[outPos++] = nonZeros;
+                        bitArrayOut[0]++;
+                        zeros = 1;
+                        nonZeros = 1;
+                    }
+                }
+                if(bit == null || bitSize == 0)
+                    break;
+                last = bit;
+                bit = br.getNextBit();
+            }
+            return bitArrayOut;
+        }
+
         public String encode(Byte[] bitArray) {
             byte mask = 128;
-            Byte[] bitArrayOut = new Byte[bitArray.Length];
+            int[] bitArrayOut = new int[bitArray.Length*2];
             string source = "", dest = "";
+            BitArrayReader br = new BitArrayReader(bitArray, 0);
+            Byte? bit, last = null;
+            bit = br.getBit(0);
+            last = bit;
+            int zeros = 0, nonZeros = 0;
+            int outPos = 1;
+            while (true) {
+                if((bit == last) || ((bit > 0) && (last > 0))) {
+                    if(bit == 0) {
+                        zeros++;
+                    } else {
+                        nonZeros++;
+                    }
+                } else {
+                    if(last == 0) {
+                        bitArrayOut[outPos++] = -zeros;
+                        bitArrayOut[0]++;
+                        zeros = 1;
+                        nonZeros = 1;
+                    } else {
+                        bitArrayOut[outPos++] = nonZeros;
+                        bitArrayOut[0]++;
+                        zeros = 1;
+                        nonZeros = 1;
+                    }
+                }
+                if(bit == null)
+                    break;
+                last = bit;
+                bit = br.getNextBit();
+            }
             for (int pos = 0; pos < bitArray.Length; )
             {
                 if ((bitArray[pos] & mask) > 0)
