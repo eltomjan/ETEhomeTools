@@ -1,5 +1,7 @@
 #pragma once
 #include "Cage.h"
+#define WIDTH 320
+#define HEIGHT 240
 
 namespace ArduinoSimulator {
 
@@ -9,6 +11,10 @@ namespace ArduinoSimulator {
 	using namespace System::Windows::Forms;
 	using namespace System::Data;
 	using namespace System::Drawing;
+	using namespace System::Runtime::InteropServices;
+
+	[DllImport("gdi32.dll", EntryPoint = "SetPixel")]
+	extern bool SetPixel(IntPtr hdc, int X, int Y, unsigned int crColor);
 
 	/// <summary>
 	/// Summary for ArduinoWindow
@@ -25,18 +31,34 @@ namespace ArduinoSimulator {
 		ArduinoWindow(void)
 		{
 			InitializeComponent();
-			//
-			//TODO: Add the constructor code here
-			//
+			bmp = gcnew array<UInt64>(WIDTH * HEIGHT);
+			SetStyle(ControlStyles::OptimizedDoubleBuffer, true);
 		}
+	protected: array<UInt64>^ bmp;
+	public: Void draw(Object^ sender, PaintEventArgs^ e)
+		{
+			IntPtr hdc = e->Graphics->GetHdc();
+
+			for (int y = 0; y < HEIGHT; y++)
+			{
+				for (int x = 0; x < WIDTH; x++)
+				{
+					if (bmp[x + y * WIDTH] & (1 << 24)) {
+						SetPixel(hdc, x, y, bmp[x + y * WIDTH] & 0xFFFFFF);
+					}
+				}
+			}
+
+			e->Graphics->ReleaseHdc(hdc);
+		}
+
 	private: System::Windows::Forms::Button^  pwrUp; 
 	private: System::Windows::Forms::Button^  pwrDwn;
 	private: System::Windows::Forms::HScrollBar^  hScrollBar1;
 	public: static ArduinoSimulator::ArduinoWindow^ m_me;
 		void setPixel(int x,int y,int r,int g,int b) {
-			Color newColor = Color::FromArgb( r, g, b );
-			m_image->SetPixel( x, y, newColor );
-			this->pictureBox1->Image = m_image;
+			bmp[x + y * WIDTH] = ((1 << 24) | (b << 16) | (g << 8) | (r));
+			pictureBox1->Invalidate();
 		}
 
 	protected:
@@ -87,9 +109,11 @@ namespace ArduinoSimulator {
 			// 
 			this->pictureBox1->Location = System::Drawing::Point(12, 12);
 			this->pictureBox1->Name = L"pictureBox1";
-			this->pictureBox1->Size = System::Drawing::Size(361, 270);
+			this->pictureBox1->Size = System::Drawing::Size(WIDTH, HEIGHT);
 			this->pictureBox1->TabIndex = 0;
 			this->pictureBox1->TabStop = false;
+			this->pictureBox1->Paint += gcnew System::Windows::Forms::PaintEventHandler(this, &ArduinoWindow::draw);
+
 			// 
 			// buttonUp
 			// 
@@ -170,7 +194,6 @@ namespace ArduinoSimulator {
 			this->Text = L"Arduino Simulator";
 			(cli::safe_cast<System::ComponentModel::ISupportInitialize^  >(this->pictureBox1))->EndInit();
 			this->ResumeLayout(false);
-			m_image = gcnew System::Drawing::Bitmap (320,240);
 			m_me = this;
 		}
 #pragma endregion

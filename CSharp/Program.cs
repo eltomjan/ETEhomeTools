@@ -34,13 +34,14 @@ namespace CSharpWithVSCode.ConsoleApp
                 fs.Close();
             }
             string charData, font = "";
-            int bitSize, fontBitSize = 0, fixedSize = 0, dynamicSize = 0, GFXsize = 0;//, GFXsquareSize = 0;
+            int bitSize, fontBitSize = 0, fixedSize = 0, dynamicSize = 0, GFXsize = 0, blockSize = 0;
             int maxW = 0, maxH = 0, mixedDifference = 0;
             for(int i=0;i<chars-1;i++) {
                 if(descr[(i * 6) + 1] > maxW) maxW = descr[(i * 6) + 1];
                 if(descr[(i * 6) + 2] > maxH) maxH = descr[(i * 6) + 2];
             }
             //int zeros = 0, zerosHalf = 0;
+            int shortest = 20, longest = 0;
             for(int i=0;i<chars-1;i++) {
                 CharBox b = new CharBox(bmp, descr, i);
                 string[] dataRows = GFX2ASCII(bmp, descr, i);
@@ -56,6 +57,23 @@ namespace CSharpWithVSCode.ConsoleApp
                 // }
                 string[] dataRowsX = b.getASCII();
                 if(b.box != null) {
+                    String sizes = "";
+                    int min = int.MaxValue, minpos = 99;
+                    for(int j=1;j<descr[(i * 6) + 1]*descr[(i * 6) + 2];j++) {
+                        int len = b.encode(j).Length;
+                        sizes += j +"-"+len+"/";
+                        if((len%8) > 0) len = 1+(len/8); else len /= 8;
+                        if(min > len) {
+                            min = len;
+                            minpos = j;
+                        }
+                        sizes += len + " ";
+                    }
+                    if(shortest > minpos) 
+                        shortest = minpos;
+                    if(longest < minpos)
+                        longest = minpos;
+                    blockSize += min;
                     bitSize = b.getFixedBitSize(-1, -1, false);
                     int commonSize = bitSize;
                     font += b.box[0].Width + "x" + b.box.Length + " byte width size:" + bitSize;
@@ -66,7 +84,8 @@ namespace CSharpWithVSCode.ConsoleApp
                     b.Xor();
                     bR.Xor();
                     bitSize = bR.getFixedBitSize(-1,-1);*/
-                    font += " fixed size:" + bitSize;
+                    font += " block size (" + minpos + "):" + min;
+                    font += " arithmetic size:" + bitSize;
                     fixedSize += bitSize;
                     bitSize = b.getGFXbitSize();
                     font += " GFX size:" + bitSize;
@@ -88,6 +107,7 @@ namespace CSharpWithVSCode.ConsoleApp
                     if(dataRows != null) for(int idx=0;idx<dataRows.Length-1;idx++) {
                         charData += dataRows[idx] + "|" + dataRowsX[idx] + Environment.NewLine;
                     }
+                    charData += sizes + Environment.NewLine;
                     charData += b.decodeStringStream(b.getPackedStream(b.box[0].Width, b.box.Length, false));
                     //GFXsquareSize += bitSize;
                     font += Environment.NewLine + charData + Environment.NewLine;
@@ -100,7 +120,7 @@ namespace CSharpWithVSCode.ConsoleApp
             //" GFX square size: " + GFXsquareSize + 
             " of " + bmp.Length + " => "
             + Perc(dynamicSize, bmp.Length) + "% " + Perc(fixedSize, bmp.Length) + "% " + Perc(GFXsize, bmp.Length) + "% "
-            //+ Perc(GFXsquareSize, bmp.Length) + "%"
+            + Perc(blockSize, bmp.Length) + "% (" + shortest + "-" + longest + " " + blockSize + ")"
             ;
             using(FileStream fs = new FileStream(args[0].Substring(0,args[0].Length-4)+".txt", FileMode.Create, FileAccess.Write)) {
                 using(StreamWriter sw = new StreamWriter(fs)) {

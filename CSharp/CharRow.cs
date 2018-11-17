@@ -1,4 +1,6 @@
-﻿namespace XorPack
+﻿using System;
+
+namespace XorPack
 {
     partial class CharRow
     {
@@ -38,6 +40,16 @@
 
         public bool getBit(int x) {
             return (row[x / 8] & (128 >> (x & 7))) > 0;
+        }
+
+        public String getStream() {
+            string retVal = "";
+
+            foreach(Byte i in row) {
+                retVal += Convert.ToString(i, 2).PadLeft(8, '0');
+            }
+
+            return retVal.Substring(0, Width);
         }
     }
 }

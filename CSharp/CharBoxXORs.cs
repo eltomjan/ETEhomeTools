@@ -85,6 +85,25 @@ namespace XorPack
             return bitArrayOut;
         }
 
+        public String encode(int charWidth) {
+            String retVal = "", map = getGFXstream(), compare = new String('0', charWidth);
+            int i;
+            for(i=0;i<map.Length;i+=charWidth) {
+                String block;
+                if(i+charWidth <= map.Length) {
+                    block = map.Substring(i, charWidth);
+                } else {
+                    block = map.Substring(i);
+                    compare = compare.Substring(0, block.Length);
+                }
+                if(block == compare) {
+                    retVal += '0';
+                } else {
+                    retVal += '1' + block;
+                }
+            }
+            return retVal;
+        }
         public String encode(Byte[] bitArray) {
             byte mask = 128;
             int[] bitArrayOut = new int[bitArray.Length*2];

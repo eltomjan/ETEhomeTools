@@ -416,6 +416,18 @@ namespace XorPack
             return retVal;
         }
         
+        public String getGFXstream() {
+            String retVal = "";
+            if(box == null) return retVal;
+            byte[] GFXdata = getGFXmap();
+
+            foreach(CharRow r in box) {
+                retVal += r.getStream();
+            }
+
+            return retVal;
+        }
+                
         // public int countZeros(Byte[] bitArray)
         // {
         //     int count = 0;
