@@ -71,6 +71,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #define _swap_int16_t(a, b) { int16_t t = a; a = b; b = t; }
 #endif
 
+
 /**************************************************************************/
 /*!
    @brief    Instatiate a GFX context for graphics! Can only be done by a superclass
@@ -1008,6 +1009,65 @@ void Adafruit_GFX::drawRGBBitmap(int16_t x, int16_t y,
     endWrite();
 }
 
+//#include <string>
+class PackedStreamReader {
+public:
+//	std::string chr;
+	PackedStreamReader(unsigned char *arr, unsigned int maxSize) {
+		m_bits = maxSize;
+		m_bitPos = 0;
+		m_mask = 0x80;
+		m_blockBits = arr;
+		m_bitsBytePtr = m_blockBits;
+		m_zeros = 0;
+		m_readRemain = 0;
+		markBitInit();
+	}
+	operator bool() {
+		if(m_readRemain) {
+			bool retVal = !!(pgm_read_byte(m_bitsBytePtr) & m_mask);
+//			chr += retVal?'1':'0';
+			next();
+			if(!--m_readRemain) {
+				markBitInit();
+			}
+			return retVal;
+		} else if(m_zeros) {
+//			chr += '0';
+			if(!--m_zeros) {
+				markBitInit();
+			}
+			return 0;
+		}
+		throw "??";
+	}
+private:
+	void markBitInit() {
+		if(pgm_read_byte(m_bitsBytePtr) & m_mask) {
+			m_readRemain = m_bits;
+//			chr += m_readRemain + '0';
+		} else {
+			m_zeros = m_bits;
+//			chr += m_zeros + '0';
+		}
+		m_markBit = false;
+		next();
+	}
+	void next () {
+		if(m_mask == 0x01) {
+			m_mask = 0x80;
+			m_bitsBytePtr++;
+		} else {
+			m_mask >>= 1;
+		}
+		m_bitPos++;
+	};
+	unsigned char *m_blockBits, *m_bitsBytePtr, m_mask;
+	unsigned int m_bits, m_bitPos;
+	bool m_markBit;
+	unsigned char m_zeros, m_readRemain;
+};
+
 // TEXT- AND CHARACTER-HANDLING FUNCTIONS ----------------------------------
 
 // Draw a character
@@ -1073,7 +1133,7 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
                  h  = pgm_read_byte(&glyph->height);
         int8_t   xo = pgm_read_byte(&glyph->xOffset),
                  yo = pgm_read_byte(&glyph->yOffset);
-        uint8_t  xx, yy, bits = 0, bit = 0;
+        uint8_t  xx, yy;
         int16_t  xo16 = 0, yo16 = 0;
 
         if(size > 1) {
@@ -1100,43 +1160,20 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
         // implemented this yet.
 
         startWrite();
-		uint8_t  bytesArray, bytesMap = 128;
-		if(bo) { // non-zero offset - find proper pos
-			uint16_t boPack = bo;
-			bo = 0;
-			bytesArray = pgm_read_byte(&bitmap[bo++]); // 8 bit array of following non-zero bytes (1) or nothing (0)
-			while(boPack) { // count original byte offset
-				if(bytesArray & bytesMap) // 1 means there is a non-zero byte saved
-					bo++;
-				bytesMap >>= 1;
-				if(!bytesMap) {
-					bytesMap = 128;
-					bytesArray = pgm_read_byte(&bitmap[bo++]); // we are on next bit array, so read it
-				}
-				boPack--; // long way thru all original bytes till our pos
-			}
-		} else {
-			bytesArray = pgm_read_byte(&bitmap[bo++]); // for first char pick 1st bit array only
-		}
+		uint8_t blockSize = pgm_read_byte(&bitmap[bo++]); // for first char pick 1st bit array only
+		PackedStreamReader bitStream(&bitmap[bo++], blockSize);
 		uint8_t bufSize = w/8+!!(w&7); // row xor buffer (each row is XORed with)
 		uint8_t *rowBuf = new uint8_t[bufSize];
 		memset(rowBuf, 0, bufSize); // zero it for 1st (untouched) row
+//		std::string chr = "";
+		bool chk;
         for(yy=0; yy<h; yy++) {
 			uint8_t *rowBufPos = rowBuf; // positions in buffer - byte/bit
 			uint8_t rowBufMask = 128;
             for(xx=0; xx<w; xx++) {
-                if(!(bit++ & 7)) {
-					if(bytesArray & bytesMap) // do we have non-zero byte saved ?
-                    bits = pgm_read_byte(&bitmap[bo++]);
-					else
-						bits = 0; // bit was 0, so byte read would be quite common 0
-					bytesMap >>= 1;
-					if(!bytesMap) {
-						bytesMap = 128;
-						bytesArray = pgm_read_byte(&bitmap[bo++]); // we are past last non-zero byte, so pick next bit array
-					}
-                }
-                if(!!(bits & 0x80) ^ !!(rowBufMask & *rowBufPos)) { // xor common bit with XOR buffer
+				chk = bitStream;
+//				chr += chk?'*':' ';
+                if(chk ^ !!(rowBufMask & *rowBufPos)) { // xor common bit with XOR buffer
 					*rowBufPos |= rowBufMask; // XOR result was 1, so set it back to buffer too
                     if(size == 1) {
                         writePixel(x+xo+xx, y+yo+yy, color);
@@ -1146,14 +1183,14 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
                     }
                 } else // XOR result was 0, buf needs 0 for that bit
 					*rowBufPos &= (255-rowBufMask);
-                bits <<= 1;
 				rowBufMask >>= 1; // move bit in XOR buffer
 				if(!rowBufMask) {
 					rowBufMask = 128;
 					rowBufPos++;
 				}
             }
-        }
+//			chr += '|';
+		}
 		delete[] rowBuf; // delete row buffer
         endWrite();
 
@@ -1543,7 +1580,7 @@ int16_t Adafruit_GFX::height(void) const {
     @param   i  True if you want to invert, false to make 'normal'
 */
 /**************************************************************************/
-void Adafruit_GFX::invertDisplay(boolean i) {
+void Adafruit_GFX::invertDisplay(boolean) {
     // Do nothing, must be subclassed if supported by hardware
 }
 
@@ -1613,7 +1650,7 @@ void Adafruit_GFX_Button::initButtonUL(
   _textcolor    = textcolor;
   _textsize     = textsize;
   _gfx          = gfx;
-  strncpy_s(_label, label, 9);
+  strncpy(_label, label, 9);
 }
 
 /**************************************************************************/
