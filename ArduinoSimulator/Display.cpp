@@ -77,7 +77,7 @@ void showScreen(char round) {
 #include "Arial24pt.h"
 	tft.setFont(&Arial24pt7b);
 	tft.println("");
-	tft.println("!Ubuntu font");
+	tft.println("!Ubuntu font,.'");
 	tft.println("Arduino Simula-\ntor demo");
 	tft.setTextColor(yellow,BG_COLOR);
 	// Symbol return
