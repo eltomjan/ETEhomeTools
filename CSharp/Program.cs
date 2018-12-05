@@ -59,21 +59,13 @@ namespace CSharpWithVSCode.ConsoleApp
                 if(b.box != null) {
                     String sizes = "";
                     int min = int.MaxValue, minpos = 99;
-<<<<<<< Updated upstream
                     for(int j=1;j<descr[(i * 6) + 1]*descr[(i * 6) + 2];j++) {
-=======
-                    for(int j=1;;j++) {
->>>>>>> Stashed changes
                         int len = b.encode(j).Length;
                         sizes += j +"-"+len+"/";
                         if((len%8) > 0) len = 1+(len/8); else len /= 8;
                         if(min > len) {
                             min = len;
                             minpos = j;
-<<<<<<< Updated upstream
-=======
-                            continue;
->>>>>>> Stashed changes
                         }
                         sizes += len + " ";
                     }

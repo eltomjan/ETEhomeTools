@@ -85,7 +85,6 @@ namespace XorPack
             return bitArrayOut;
         }
 
-<<<<<<< Updated upstream
         public String encode(int charWidth) {
             String retVal = "", map = getGFXstream(), compare = new String('0', charWidth);
             int i;
@@ -105,8 +104,6 @@ namespace XorPack
             }
             return retVal;
         }
-=======
->>>>>>> Stashed changes
         public String encode(Byte[] bitArray) {
             byte mask = 128;
             int[] bitArrayOut = new int[bitArray.Length*2];
