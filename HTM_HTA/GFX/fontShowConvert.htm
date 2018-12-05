@@ -42,7 +42,7 @@ function newFontDefinition(f) {
     f.out.value = res;
 }
 function newGlypths(f) {
-    var glphBits = new Array, asc = "{";
+    glphBits = new Array, asc = "{";
     for(var i=0;i<glph.length;i++) {
         if(i) asc += ",\n"; else asc += '\n';
         glphBits.push(glph[i].slice());
