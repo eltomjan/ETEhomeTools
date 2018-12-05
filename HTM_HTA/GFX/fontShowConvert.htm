@@ -5,6 +5,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <script>
 var bmp, glph;
+var glphBits;
 function read(f) { // reads uncompressed GFX font
     var fntC = f.inp.value;
     fntC = fntC.replace(/\/\/.+/g, '');
@@ -18,6 +19,27 @@ function read(f) { // reads uncompressed GFX font
     glph = glph.replace(/\{/g,"new Array("); // new Array (new Array (0x12}, new Array (0x13}, ...
     glph = glph.replace(/\}/g,')'); // new Array (new Array (0x12), new Array (0x13), ...
     glph = eval(glph);
+    glphBits = null;
+}
+function newFontDefinition(f) {
+    var fntC = f.inp.value, res = '';
+    var pos1 = fntC.indexOf('{'), pos2 = fntC.indexOf('}');
+    res = fntC.substr(0, pos1 + 1);
+    pos1 = fntC.indexOf('{', pos2);
+    res += '\n' + bmp.join(',');
+    res += fntC.substr(pos2, pos1 - pos2 + 1);
+    res += '\n';
+    var gl = glphBits?glphBits:glph;
+    for(var i=0;i<gl.length;i++) {
+        if(i) res += ",\n";
+        res += '{' + gl[i].join(',') + '}';
+    }
+    res += "\n};";
+    pos1 = fntC.lastIndexOf('{');
+    pos1 = fntC.lastIndexOf(';', pos1);
+    pos1 = fntC.indexOf('\n', pos1);
+    res += fntC.substr(pos1);
+    f.out.value = res;
 }
 function newGlypths(f) {
     var glphBits = new Array, asc = "{";
@@ -29,6 +51,31 @@ function newGlypths(f) {
     }
     asc += "\n};";
     f.out.value = asc;
+}
+var one = '█', zero = '░';
+// ─│┌┐└┘├┤┬┴┼═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬▀▄█▌▐░▒▓
+function saveChar(f) {
+    var pos = f.nr.value;
+    var bmpFrom = glph[pos][0];
+    var w = glph[pos][1], h = glph[pos][2];
+    var b = 0, mask = 0x80;
+    var out = f.out.value.split('\n');
+    for(yy=0; yy<h; yy++) {
+        for(xx=0; xx<w; xx++) {
+            if(out[yy][xx] == one) {
+                b |= mask;
+            }
+            mask >>= 1;
+            if(!mask) {
+                mask = 0x80;
+                bmp[bmpFrom++] = b;
+                b = 0;
+            }
+        }
+    }
+    if(mask != 0x80) {
+        bmp[bmpFrom++] = b;
+    }
 }
 function show(f) { // show nr-th char of font
 /*typedef struct { // Data stored PER GLYPH
@@ -44,8 +91,7 @@ function show(f) { // show nr-th char of font
     var out = '';
     for(yy=0; yy<h; yy++) {
         for(xx=0; xx<w; xx++) {
-// ─│┌┐└┘├┤┬┴┼═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬▀▄█▌▐░▒▓
-            if(b & mask) out += '█'; else out += '░';
+            if(b & mask) out += one; else out += zero;
             mask >>= 1;
             if(!mask) {
                 mask = 0x80;
@@ -73,6 +119,23 @@ var hlpStart;
 function removeHelp(t) {
     if(t.value == hlpStart) t.value = '';
 }
+function readData(e) {
+    f = document.forms[0];
+    f.inp.value = e.currentTarget.result;
+    read(f)
+}
+function handleFileSelect() {
+    var files = event.target.files; // FileList object
+
+    for (var i = 0, f; f = files[i]; i++) {
+      var reader = new FileReader();
+
+      reader.onload = readData;
+
+	  reader.readAsText(f);
+	}
+
+}
 </script>
 </head>
 <body onload="hlpStart = document.forms[0].inp.value">
@@ -80,10 +143,15 @@ function removeHelp(t) {
 <textarea name=inp rows=40 cols=60 onfocus=removeHelp(this)>
 Paste original GFX font definition here
 </textarea>
+<span style="position:absolute">
+<input type="file" id="files" name="files[]" onchange="handleFileSelect()" accept=".h, .c"/><br>
+<input type="button" value="ReNewFontDefinition" onclick="newFontDefinition(this.form)">
+</span>
 <input type=button value=Read onclick=read(this.form)>
 <input type=button value="Convert Glyphs" onclick=newGlypths(this.form)>
 <input name=nr value=33 size=3>
 <input type=button value=Show onclick=show(this.form)>
+<input type=button value=Save onclick=saveChar(this.form)>
 <textarea name=out rows=40 cols=60>
 Result area
 </textarea>
