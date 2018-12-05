@@ -1,0 +1,20 @@
+<html>
+<head>
+<title>Regression Tools</title>
+<style>
+input,textarea {width:100%}
+body {overflow:auto;font:12px Verdana}
+</style>
+</head>
+<body onload=set_em()>
+<script language="JavaScript">
+function set_em() {
+b="";
+for(a=32;a<128;a++) b+=String.fromCharCode(a);
+a=b
+window.clipboardData.setData("Text",a)
+window.close()
+}
+</script>
+</body>
+</html>

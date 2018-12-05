@@ -1,0 +1,30 @@
+<html>
+<head>
+<title>Drop2Clipboard</title>
+  <HTA:APPLICATION ID="" 
+    BORDER="thick"
+    CAPTION="yes"
+    ICON=""
+    SHOWINTASKBAR="yes"
+    SINGLEINSTANCE="yes"
+    SYSMENU="yes"
+    WINDOWSTATE="normal">
+</head>
+<script>
+function load() {
+if(content.location.pathname!='/blank') {
+a=content.location.pathname;
+a=a.replace(/^\//,"");
+a=unescape(a);
+window.clipboardData.setData("Text",a);
+}
+}
+</script>
+<!--<frameset rows="0,*">
+<frame name=driver application=yes>
+</frame>-->
+<frameset>
+<frame name=content onload=load()>
+</frame>
+</frameset>
+</html>

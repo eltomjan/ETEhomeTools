@@ -1,0 +1,18 @@
+<script>
+r=50;
+ys=xs=r*r;
+y=r;
+x=1;
+px=r-1
+a='';
+while(y>r/3) {
+	while(ys<=xs) {xs+=-2*x+1; x++}
+	xs2=xs;
+	ys=ys-2*y+1;
+	x2=x
+	while(ys<xs2) {xs2+=-2*x2+1; x2++}
+	a+='<span style=background-color:black;width:'+(r-x2)+'px;height:1px><img height=1></span><br>';
+	y--;
+}
+document.write(a)
+</script>

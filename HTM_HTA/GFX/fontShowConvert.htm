@@ -1,0 +1,92 @@
+﻿<!DOCTYPE html>
+<html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>GFX font reader</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<script>
+var bmp, glph;
+function read(f) { // reads uncompressed GFX font
+    var fntC = f.inp.value;
+    fntC = fntC.replace(/\/\/.+/g, '');
+    var pos1 = fntC.indexOf('{'), pos2 = fntC.indexOf('}');
+    bmp = "new Array(" + fntC.substr(pos1 + 1, pos2 - pos1 - 2) + ')'; // new Array (0x12, 0x13, ...)
+    bmp = eval(bmp);
+    pos1 = fntC.indexOf('{', pos2);
+    pos2 = fntC.indexOf(';', pos1);
+    pos2 = fntC.lastIndexOf('}', pos2);
+    glph = "new Array(" + fntC.substr(pos1 + 1, pos2 - pos1 - 2) + ')'; // new Array ({0x12}, {0x13}, ...
+    glph = glph.replace(/\{/g,"new Array("); // new Array (new Array (0x12}, new Array (0x13}, ...
+    glph = glph.replace(/\}/g,')'); // new Array (new Array (0x12), new Array (0x13), ...
+    glph = eval(glph);
+}
+function newGlypths(f) {
+    var glphBits = new Array, asc = "{";
+    for(var i=0;i<glph.length;i++) {
+        if(i) asc += ",\n"; else asc += '\n';
+        glphBits.push(glph[i].slice());
+        glphBits[i][0] = glphBits[i][1] * glphBits[i][2];
+        asc += '{' + glphBits[i].join(',') + '}';
+    }
+    asc += "\n};";
+    f.out.value = asc;
+}
+function show(f) { // show nr-th char of font
+/*typedef struct { // Data stored PER GLYPH
+    uint16_t bitmapOffset;     // Pointer into GFXfont->bitmap
+    uint8_t  width, height;    // Bitmap dimensions in pixels
+    uint8_t  xAdvance;         // Distance to advance cursor (x axis)
+    int8_t   xOffset, yOffset; // Dist from cursor pos to UL corner
+} GFXglyph;*/
+    var pos = f.nr.value;
+    var bmpFrom = glph[pos][0];
+    var w = glph[pos][1], h = glph[pos][2];
+    var b = bmp[bmpFrom++], mask = 0x80;
+    var out = '';
+    for(yy=0; yy<h; yy++) {
+        for(xx=0; xx<w; xx++) {
+// ─│┌┐└┘├┤┬┴┼═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬▀▄█▌▐░▒▓
+            if(b & mask) out += '█'; else out += '░';
+            mask >>= 1;
+            if(!mask) {
+                mask = 0x80;
+                b = bmp[bmpFrom++];
+            }
+        }
+        out += '│' + (yy+1) + '\n';
+    }
+    for(xx=0; xx<w; xx++) {
+        out += '─';
+    }
+    out += "┘\n";
+    if(w>10) {
+        for(xx=0; xx<w; xx++) {
+            out += ((1 + xx) / 10) | 0;
+        }
+        out += "\n";
+    }
+    for(xx=0; xx<w; xx++) {
+        out += (1 + xx) % 10;
+    }
+    f.out.value = out;
+}
+var hlpStart;
+function removeHelp(t) {
+    if(t.value == hlpStart) t.value = '';
+}
+</script>
+</head>
+<body onload="hlpStart = document.forms[0].inp.value">
+<form>
+<textarea name=inp rows=40 cols=60 onfocus=removeHelp(this)>
+Paste original GFX font definition here
+</textarea>
+<input type=button value=Read onclick=read(this.form)>
+<input type=button value="Convert Glyphs" onclick=newGlypths(this.form)>
+<input name=nr value=33 size=3>
+<input type=button value=Show onclick=show(this.form)>
+<textarea name=out rows=40 cols=60>
+Result area
+</textarea>
+</form>
+</body>
+</html>
