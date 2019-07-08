@@ -1,0 +1,32 @@
+<html>
+<head>
+<META content=IE=8 http-equiv=X-UA-Compatible>
+<script>
+    function updatePage() {
+        var oIfr = document.getElementsByTagName("IFRAME")[0];
+        var doc = oIfr.contentDocument;
+        if (!doc || !document.getElementsByTagName) return;
+        var tab = doc.getElementsByTagName("TABLE");
+        if (tab.length) {
+            var row = tab[0].rows;
+            for(var r=1;r<row.length;r++) {
+              var col = row[r].cells;
+              for(var c=0;c<col.length;c++) {
+                  if(col[c].firstChild && col[c].firstChild.nodeName == "#text") {
+                      col[c].innerHTML = "<input value=\""
+                        + col[c].innerText.replace(/"/g,"'")
+                        + "\">";
+                  }
+              }
+            }
+            //alert(tab[0].outerHTML);
+        } else {
+            //alert(doc.body.outerHTML);
+        }
+    }
+</script>
+</head>
+<body>
+    <iframe onload="parent.updatePage()" src="https://www.kdd.cz/" frameborder="0" style="overflow:hidden;overflow-x:hidden;overflow-y:hidden;height:100%;width:100%;position:absolute;top:0px;left:0px;right:0px;bottom:0px" height="100%" width="100%"></iframe>
+</body>
+</html>

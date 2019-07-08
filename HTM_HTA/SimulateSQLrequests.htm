@@ -1,0 +1,159 @@
+﻿<html>
+<head>
+<style>
+body { margin:0px; }
+table { border-spacing:1px; background:black;}
+th { background:white; background:#E0E0E0; font:bold 10px Arial; }
+td { background:white; white-space: nowrap; text-align:right; font:14px Arial; }
+textarea { width:100%; height:40% }
+div { color:#AFA; background:black; display:inline; padding:1px }
+</style>
+<script>
+var JSON_Template =
+{}; // replace this line with generated JSON field for comparision
+
+function simulate(el) {
+	var rewriteRepeatTxt = ['',''];
+	var sql = document.getElementById("sql").value + '\n';
+	sql = sql.match(/^[^-\n]{3}.+\n/gm); // list of uncommented lines
+	if(!sql) return;
+	var tables = new Array;
+	var rewrites = 0, repeats = 0;
+/* Inspired by https://swanhart.livejournal.com/130191.html
+[A-Za-z_.]+\(.*?\)+	# Match FUNCTION(...)
+|\(.*?\)+		# Match grouped items
+|'[^'](?:|\'|'')*'+	# Match single quotes
+|`(?:[^`]|``)*`+	# Match and backticks
+|([^\s,{]+{[^}]+})	# Match items in square bracket
+|([^\s,{};])+		# Match keywords, operators and aliases
+
+Extended to accept also key={a 'b c:d e-f'} etc.
+*/
+// rq = rq.replace(/\s*=\s*/g,'='); // spaces around = break regular
+	var reg = new RegExp(/[A-Za-z_.]+\(.*?\)+|\(.*?\)+|'[^'](?:|\'|'')*'+|`(?:[^`]|``)*`+|([^\s,{]+{[^}]+})|([^\s,{};])+/gi);
+	for(var r=0;r<sql.length;r++) {
+		rq = sql[r];
+		var elements = rq.match(reg); // UPDATE,table,SET,col=val,...,where,key=name
+		if(!elements
+		|| elements[0].toUpperCase() != 'UPDATE'
+		|| elements[2].toUpperCase() != 'SET') {
+			continue; // unrecognized statement
+		}
+		tab = elements[1]; // dest table
+		collect = new Array;
+		var i=elements.length-1;
+		var key = '',val = '';
+		for(;i>2;i--) {
+			if(elements[i].toUpperCase() == 'WHERE') {
+				var pair = elements[i+1].split('=');
+				key = pair[0];
+				val = pair[1];
+				val = unquote(val);
+				if(key == val[val.length-1]) val = val.substr(1, val.length-2);
+				collect[pair[0]] = val; // key=value
+				break;
+			}
+		}
+		if((i==2) && elements[i].toUpperCase() != 'WHERE') {
+			i=elements.length;
+		}
+		if(!tables[tab]) {
+			tables[tab] = new Array;
+		}
+		for(var j=3;j<i;j++) {
+			var pair = elements[j].split('=');
+			collect[pair[0]] = unquote(pair[1]);
+		}
+		if(tables[tab][val]) {
+			for(var nm in collect) {
+				if(tables[tab][val][nm] && nm != key) {
+					if(tables[tab][val][nm] != collect[nm]) {
+						tables[tab][val][nm] += "  <span style='color:red'>►</span> " + collect[nm]
+						rewrites++
+						rewriteRepeatTxt[0] += rq.replace(nm,"<b>"+nm+"</b>").replace(/\n/g,"<br>");
+					} else {
+						repeats++;
+						rewriteRepeatTxt[1] += rq + nm + ':' + tables[tab][val][nm] + "->" + collect[nm] + '\n';
+					}
+				} else {
+					tables[tab][val][nm] = collect[nm]
+				}
+			}
+		} else tables[tab][val] = collect;
+	}
+	// Processing collected data
+	out = '';
+	if(rewrites || repeats) {
+		if(rewrites) {
+			out += "<span style='color:red' title=\"" +
+			rewriteRepeatTxt[0].replace(/"/g,"&quot;")
+			+ "\" onclick=showText(this.title)>Rewritten data: " + rewrites + "x</span><br>";
+		}
+		if(repeats) {
+			out += "<span style='color:red' title=\"" +
+			rewriteRepeatTxt[1].replace(/"/g,"&quot;")
+			+ "\" onclick=showText(this.title)>Repeated items: " + repeats + "x</span><br>";
+		}
+		out += "<span id=details></span>";
+		out += "<span style='float:left'>Click to show/hide details.</span><br><br>";
+	}
+	json = '';
+	for(var tab in tables) { // list of tables
+		json += json?",\n":'{';
+		out += "<B>" + tab + "</B><br>";
+		json += '"' + tab + "\": {";
+		for(var subTab in tables[tab]) { // list of sub tables
+			json += '"' + subTab + "\":{";
+			if(Array.isArray(tables[tab][subTab])) {
+				tab3 = tables[tab][subTab];
+			} else tab3 = tables[tab];
+			out += "<table><tr>";
+			for(var col in tab3) { // columns of target table - collect JSON and print headers
+				json += '"' + col.replace(/"/g,'') + '":' + '"' + tab3[col] + '",';
+				out += "<th>"+col+"</th>";
+			}
+			out += "</tr><tr>";
+			for(var col in tab3) { // fill data and compare them with hardcoded JSON template
+				if(JSON_Template[tab] && JSON_Template[tab][subTab] && tab3[col] != JSON_Template[tab][subTab][col.replace(/"/g,'')]) {
+					out += "<td><div>"+tab3[col]+'</div>('+JSON_Template[tab][subTab][col]+")</td>";
+				} else {
+					out += "<td>"+tab3[col]+"</td>";
+				}
+			}
+			json += '},';
+			out += "</tr></table><br>";
+		}
+		json = json.substr(0,json.length-1);
+		json += "}";
+	}
+	document.getElementById("JSON").value = json + '};';
+//	alert(out);
+	el.innerHTML = out;
+	return out;
+}
+function unquote(val) {
+	if(val[0] == val[val.length-1]) {
+		if(val[0] == '"' || val[0] == '\'') {
+			val = val.substr(1, val.length-2);
+		}
+	}
+	return val;
+}
+function showText(txt) {
+	var o = document.getElementById("details");
+	if(o.innerText) o.innerHTML=''; else o.innerHTML = txt;
+}
+</script>
+</head>
+<body>
+<span id=tagTarget></span>
+<b>&nbsp;SQL
+<textarea id=sql>
+</textarea>
+<input type=button value="Simulate simple UPDATEs" onclick="simulate(document.getElementById('tagTarget'))""><br>
+&nbsp;JSON 4 Comparision => line 13 in source
+<textarea id=JSON>
+</textarea>
+</b>
+</body>
+</html>

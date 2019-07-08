@@ -1,0 +1,83 @@
+﻿<html>
+<meta http-equiv="x-ua-compatible" content="ie=10">
+<head>
+<title>&nbsp;</title>
+<script>
+var baseURL;
+function fakeSubmit() {
+    var f = document.forms[0];
+    var url = baseURL.substr(0, baseURL.indexOf('?') + 1);
+    for(var a=0;a<f.length;a++) {
+        if(f[a].type == "submit") continue;
+        if(a) url += '&';
+        url += f[a].name + '=' + f[a].value;
+    }
+    swPage(url);
+}
+function swPage(url) {
+    if (!baseURL) baseURL = url;
+    var htm  = load(url);
+    //var tempDiv = document.createElement('div');
+    //tempDiv.innerHTML = htm;
+    //o = tempDiv.firstChild;
+    var o = new DOMParser().parseFromString(htm, "text/html");
+    o = o.body;
+    var i = find(o, "PRE");
+    if(!i) return;
+    htm = i.outerHTML;
+    i = find(i, "P");
+    var urlBase = url.substr(0, url.indexOf('?'));
+    fixLinks(i, urlBase);
+    var lnks = i.innerHTML; /* <span class='textctverd'>Stránka <strong>100 / 1</strong> &ndash; podstránky:
+        <span id='teletextSubpages'>
+            <a class='active' href='?page=100A&amp;ver=TXT'>1</a>
+    */
+    i = find(i, "FORM");
+    if(!i) return;
+    i.page.title="Pole číslo stránky";
+    var f = i.outerHTML;
+    f = f.replace(' ', ' onsubmit=fakeSubmit() ');
+    lnks += f; /* <td class="center">
+    <a class="sipka-vlevo" href="?page=899&amp;ver=TXT" id="goPrev" title="Stránka 899">Předchozí</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a class="sipka-vpravo" href="?page=101&amp;ver=TXT" id="goNext" title="Stránka 101">Následující</a>
+    <input type="hidden" name="ver" value="TXT" />*/
+    document.body.innerHTML = lnks + htm;
+}
+function load(url) {
+    var oReq = new XMLHttpRequest();
+    oReq.open("GET", url, false);
+    oReq.send();
+    return oReq.response;
+}
+function fixLinks(o, base) {
+    var a = find(o, 'A');
+    while(a) {
+        var rest = a.href;
+        rest = rest.substr(rest.indexOf('?'));
+        a.setAttribute("onclick", "swPage('" + base + rest + "')");
+        a.href = "#";
+        a = a.nextSibling;
+        a = find(a, 'A');
+    }
+}
+function find(i, TN) {
+    while(i && i.tagName != TN) {
+        if(i.firstElementChild) {
+            i = i.firstElementChild;
+        } else if(i.nextSibling) {
+            i = i.nextSibling;
+        } else {
+            do {
+                i = i.parentNode;
+            } while(i && !i.nextSibling)
+            if(!i) return;
+            i = i.nextSibling;
+        }
+    }
+    return i;
+}
+</script>
+</head>
+<body onload="swPage('http://www.ceskatelevize.cz/teletext/ct/?ver=TXT&page=100A')">
+</body>
+</html>

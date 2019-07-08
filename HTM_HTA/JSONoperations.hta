@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+ <head>
+ <title>JSON Operations</title>
+ <meta http-equiv="x-ua-compatible" content="IE=9" />
+ <HTA:APPLICATION
+   ID="JsonOperations"
+   APPLICATIONNAME="JSON Operations"
+   SINGLEINSTANCE="yes"/>
+ </head>
+<script>
+/*
+var csv = []; // CSV result rows
+xml = JSON2XML_CSV(jsonData, csv); // Returns also XML string
+res = csv.join('\r\n');
+document.write('<textarea cols=100 rows=100>' + res + '</textarea>');
+document.close();
+*/
+function JSON2XML_CSV(arr, xml, stack, prevHead) {
+    if(!prevHead) prevHead = [1,,[]]; // row #, head string, recursive turn array
+    if(!stack) stack = [];
+    var res = [];
+    var r = "";
+    var row = stack.slice();
+    var head = stack.slice();
+    for(var a in arr) {
+         try {
+            if(arr[a] == null) { // Change null's to string
+                    arr[a] = "null";
+            }
+            if(arr[a].toString().indexOf("[object") == 0
+            || Array.isArray(arr[a])) {
+                    if(isNaN(a)) {
+                            r += '<' + a + '>\r\n';
+                    } else {
+                            r += '<No' + a + '>';
+                    }
+                    if(isNaN(a)) {
+                            stack.push(a);
+                    } else {
+                            stack.push('#');
+                    }
+                    prevHead[2].push([]);
+                    var sub = JSON2XML_CSV(arr[a], prevHead[2][prevHead[2].length-1], stack, prevHead).split('\n');
+                    for(var b in sub) if(sub[b].length) r += sub[b];
+                    if(isNaN(a)) { // Use text label
+                            r += '</' + a + '>\r\n';
+                    } else { // Prefix #
+                            r += '</No' + a + '>\r\n';
+                    }
+                    stack.pop();
+                    if(0 == stack.length) {
+                        for (var b in prevHead[2]) {
+                            for (var c in prevHead[2][b]) {
+                                xml.push(prevHead[2][b][c]); // copy2 results in proper order
+                            }
+                            c = prevHead[2][b].length; // and clean
+                            for (; c; c--) {
+                                prevHead[2][b].pop();
+                            }
+                        }
+                        c = prevHead[2].length;
+                        for (; c; c--) {
+                            prevHead[2].pop();
+                        }
+                    }
+            } else {
+                    head.push(a);
+                    row.push(arr[a]);
+                    r += '<' + a + ">" + arr[a] + '</' + a + '>';
+            }
+         } catch (e) {
+                xml.push(e);
+                return e;
+         }
+    }
+    if(row.length != stack.length) {
+            var h = head.join('\t');
+            if(prevHead[1] != h) {
+                    prevHead[0] = 1;
+                    xml.push(h);
+            }
+            prevHead[1] = h;
+            var numsNo = 0;
+            for(var c in stack) {
+                    if(row[c] == '#') numsNo++;
+            }
+            for(var c in stack) {
+                    if(row[c] == '#') {
+                        if(1 == numsNo--) {
+                            row[c] = prevHead[0]++; // re-create numbered block for same headers - does not support multi level # yet
+                        } else {
+                            row[c] = ""; // no # except 4 deepest column
+                        }
+                    } else {
+                        row[c] = '';
+                    }
+            }
+            xml.push(row.join('\t'));
+    }
+    return r;
+}
+</script>
+<script>
+var inp, frm, xmlRes = "Convert 1st", csvRes = xmlRes, lib, outPut;
+function read(n) {
+	var oReq = new XMLHttpRequest();
+	oReq.open("GET", n, true);
+	oReq.onloadend = function (oEvent) {
+		lib = oReq.responseText; // JSON2XML_CSV(arr, xml, stack, prevHead)
+	}
+	oReq.send();
+}
+//read("https://raw.githubusercontent.com/eltomjan/ETEhomeTools/master/HTM_HTA/JSON2XML_CSV.js");
+function l() {
+	frm = document.forms[0];
+    outPut = frm.Results;
+	inp = frm.JSONtxt.innerText;
+    var cmd = JsonOperations.commandLine;
+    if (cmd) cmd = cmd.substr(cmd.toUpperCase().indexOf(".HTA\"") + 6);
+    else return;
+    try {
+	    if(cmd.length) {
+		    cmd = JSON.parse(cmd);
+		    cutRecords2(cmd);
+		    close();
+	    }
+    } catch(e) {
+	    alert(e);
+    }
+}
+function clr(t) {
+	if(t.innerText == inp) {
+		t.innerText = "";
+	}
+}
+function convert(json) {
+	var csv = [];
+  var JSONtxt;
+  try {
+  	JSONtxt = JSON.parse(json);
+  } catch (e) {
+    csvRes = e;
+    xmlRes = e;
+    outPut.value = e;
+    return;
+  }
+	xmlRes = JSON2XML_CSV(JSONtxt, csv);
+	csvRes = csv.join("\r\n");
+  outPut.value = "Converted...";
+}
+function cutRecords() {
+    var name = frm.FileName.value;
+    var dta = prompt("FileName,No ?", name ? name + ',' : "");
+    if (!dta || !(dta.length + name.length) || dta.indexOf(',') < 0 || (dta.length - name.length < 2))
+        return;
+    dta = [dta.substr(0, dta.indexOf(',')), dta.substr(dta.indexOf(',') + 1)];
+    if (!dta[1]) return;
+    if (dta[0][dta[0].length - 1] != '\\') {
+        cutRecords2(dta);
+    } else {
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+        var files = fso.GetFolder(dta[0]).Files;
+        var fc = new Enumerator(files);
+        for (; !fc.atEnd(); fc.moveNext()) {
+            dta[0] = fc.item().Path
+            if (!dta[0].match(/\.json$/)) continue;
+            cutRecords2(dta);
+        }
+    }
+}
+function cutRecords2(dta) {
+	json = read(dta[0]);
+  try {
+  	JSONtxt = JSON.parse(json);
+        frm.JSONtxt.value = json;
+        frm.FileName.value = dta[0];
+  } catch (e) {
+    csvRes = e;
+    xmlRes = e;
+    outPut.value = e;
+    return;
+  }
+	var size = JSONtxt.records.length;
+	var records = JSONtxt.records;
+	var name = dta[0].split('.');
+	var No = dta[1]*1;
+	var pos = 0;
+	for(var i=0;i*No<size;i++) {
+		JSONtxt.records = records.slice(pos, pos + No);
+		pos += No;
+		var val = JSON.stringify(JSONtxt);
+		writeFile(name[0] + (i+1000).toString().substr(1) + '.' + name[1], val);
+		if(outPut) outPut.value = val;
+	}
+}
+function read(name)
+{
+	var fso, f, s;
+	fso = new ActiveXObject("Scripting.FileSystemObject"); 
+	f = fso.OpenTextFile(name); 
+	s = f.ReadAll(); 
+	f.Close(); 
+	return(s); 
+}
+function writeFile(name, text) {
+	var fso, f;
+	fso = new ActiveXObject("Scripting.FileSystemObject"); 
+	var f = fso.CreateTextFile(name, true); 
+	f.WriteLine(text); 
+	f.Close();
+}
+function loadFile() {
+    var dir = frm.FileName.value;
+    var dialog = new ActiveXObject("MSComDlg.CommonDialog");
+    if (dir.substr(dir.length - 1) != '\\') dialog.InitDir = dir.substr(0,dir.lastIndexOf('\\'));
+    dialog.Filter = "JSONs (*.txt,*.json)|*.txt;*.json";
+    dialog.MaxFileSize = 1024;
+    dialog.ShowOpen();
+    var name = dialog.FileName
+    if (name && name.length) {
+        frm.JSONtxt.value = read(name);
+        frm.FileName.value = name;
+    }
+}
+function saveFile(t) {
+    if (!frm.FileName.value.length)
+        return
+    if (t == 1 && xmlRes != "Convert 1st") {
+        writeFile(frm.FileName.value.replace(/\.json$/, ".xml"), xmlRes);
+    } else if (t == 2 && csvRes != "Convert 1st") {
+        writeFile(frm.FileName.value.replace(/\.json$/, ".txt"), csvRes);
+    }
+}
+function ChooseDir() {
+    var objShell = new ActiveXObject("Shell.Application");
+/*    var dir = frm.FileName.value;
+    if (dir.length && dir.lastIndexOf('\\') != dir.length)
+        dir = dir.substr(0, dir.lastIndexOf('\\'));*/
+    var fld = objShell.BrowseForFolder(0, "Folder with JSONs", 0, "");
+    if (fld) {
+        fld = fld.Items().Item().Path;
+        if (fld.indexOf('\\') < 0) return;
+        if (fld[fld.length - 1] != '\\') fld += '\\';
+        frm.FileName.value = fld;
+    }
+
+}
+</script>
+<body onload="l()">
+	<div style="float: left;">
+	<div style="margin-left:90px">
+		1a <input type="button" value="Load File" onclick="loadFile()"> <input type="button" value="Select Folder" onclick="ChooseDir()"><br>
+		&nbsp; b <input type="button" value="Slice \records array" title='cmd call example:&#10;JSONoperations.hta ["name.json",123]' onclick="cutRecords(frm.JSONtxt.innerText)"><br>
+		2. <input type="button" value="Convert"  onclick="convert(frm.JSONtxt.innerText)"><br>
+		<input type="button" value="Show XML" onclick="outPut.value = xmlRes"><br>
+		<input type="button" value="Show CSV" onclick="outPut.value = csvRes"><br>
+	</div>
+	<form>
+        File Name<br>
+        <input name="FileName" size="70" readonly><br>
+        <div style="margin-left:90px">
+            3. Save <input type="button" value="XML" onclick="saveFile(1)">
+            <input type="button" value="CSV" onclick="saveFile(2)">
+        </div>
+	</div>
+		<textarea rows=30 cols=115 name="Results">Result area</textarea>
+    <textarea name="JSONtxt" rows=10 cols=171 onfocus="clr(this)">
+      Paste JSON here...
+		</textarea>
+	</form>
+</body>
+</html>
