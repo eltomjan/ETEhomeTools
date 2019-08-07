@@ -9,6 +9,8 @@ var JNode = (function (jsNode) {
         this.key = _key;
         this.value = _value;
     }
+    JNode.prototype.HasOwnKey = function () { return this.key && (typeof this.key != "number"); }
+    JNode.prototype.HasStringValue = function () { return !(this.value instanceof Object); }
 
     return JNode;
 })();
