@@ -44,7 +44,11 @@ var JIterator = (function (json) {
     }
 
     JIterator.prototype.Current = function () { return current; }
-    JIterator.prototype.SetCurrent = function (newCurrent) { current = newCurrent; }
+    JIterator.prototype.SetCurrent = function (newCurrent) {
+        current = newCurrent;
+        this.Level = 0;
+        while(newCurrent = newCurrent.parent) this.Level++;
+    }
     JIterator.prototype.Parent = function () {
         var retVal = current.parent;
         if (retVal == null) return false;
