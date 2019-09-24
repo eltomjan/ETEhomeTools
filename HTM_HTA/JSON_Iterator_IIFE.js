@@ -76,6 +76,9 @@ var JIterator = (function (json) {
                 }
                 level = level.parent;
             } while (level != null);
+            steps.forEach(function (el, i) {
+                if (!isNaN(el)) steps[i] = '[' + el + ']';
+            });
             return steps.reverse().join('.');
         },
         get hasOwnKey() { return current.key && (typeof current.key != "number"); },
@@ -151,13 +154,7 @@ var JIterator = (function (json) {
                 var level = this.Level, point = current;
                 while (this.DepthFirst() && level != this.Level);
                 if (current) return 2; // returned up & moved next
-                do {
-                    this.Reset();
-                    level++;
-                    while (this.DepthFirst() && level != this.Level);
-                    if (current) return 3; // returned up & moved next
-                } while (maxLevel >= level);
-                return current != null ? 3 : 0;
+                return 0;
             } else if (current.node) {
                 current = current.node;
                 this.Level++;
@@ -258,6 +255,17 @@ var JIterator = (function (json) {
             var retVal = "";
             retVal = steps.reverse();
             return retVal;
+        },
+        Move2path: function (json) {
+            var nd = this.current;
+            var pth = [nd];
+            while (nd.parent) {
+                nd = nd.parent;
+                pth.push(nd);
+            }
+            pth.reverse();
+            for (var x in pth) json = json[pth[x].key];
+            return json;
         }
     }
 
