@@ -79,7 +79,7 @@ var JNode = (function (jsNode) {
         DepthFirst: function () {
             if (this == null) return 0; // exit sign
             if (this.node != null || this.obj instanceof Object) {
-                return this.Down(); // moved down
+                return this.GoDown(); // moved down
             } else if (this.next != null) {
                 return this.next;// moved right
             } else {
