@@ -216,6 +216,18 @@ var JIterator = (function (json) {
                 return null;
             }
         },
+        FindValue: function (val) {
+            var pos = this._privates.Current;
+            while (this._privates.Current && this._privates.Current.value !== val) this.DepthFirst();
+            if (this._privates.Current.value === val) {
+                var retVal = this._privates.Current;
+                this._privates.setCurrent(pos);
+                return retVal;
+            } else {
+                this._privates.setCurrent(pos);
+                return null;
+            }
+        },
         FindPair: function (key, value, move2) {
             var pos = this._privates.current;
             while (this._privates.current) {
