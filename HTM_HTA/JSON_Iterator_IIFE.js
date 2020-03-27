@@ -59,6 +59,7 @@ var JIterator = (function (json) {
             }
         }
         if (!this._privates.Current && this._privates.Root) this._privates.setCurrent(this._privates.Root);
+        this.Level = 0;
     }
     JIterator.prototype = {
         // Public Getters
