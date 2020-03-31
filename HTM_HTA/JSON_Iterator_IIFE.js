@@ -11,7 +11,12 @@ var JNode = (function (jsNode) {
     }
     JNode.prototype = {
         get HasOwnKey () { return this.key && (this.key.constructor !== Number); },
-        get HasStringValue () { return this.value.constructor === String; }
+        get HasStringValue () { return this.value.constructor === String; },
+        get HasSimpleValue() {
+            return this.value !== null
+                && !(this.value instanceof Array)
+                && !(this.value instanceof Object)
+        }
     };
     return JNode;
 })();
@@ -207,7 +212,12 @@ var JIterator = (function (json) {
         },
         FindKey: function (key) {
             var pos = this._privates.Current;
-            while (this._privates.Current && this._privates.Current.key !== key) this.DepthFirst();
+            while (this._privates.Current && this._privates.Current.key !== key) {
+                if (!this.DepthFirst()) {
+                    this._privates.setCurrent(pos);
+                    return null;
+                }
+            }
             if (this._privates.Current.key === key) {
                 var retVal = this._privates.Current;
                 this._privates.setCurrent(pos);
