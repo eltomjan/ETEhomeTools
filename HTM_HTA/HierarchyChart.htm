@@ -1,0 +1,167 @@
+<style>
+TABLE { border-spacing: 0;}
+TR { text-align: center;}
+TD { padding: 0; cursor: default; }
+SPAN { padding: 2px; margin: 1px; border: 1px solid gray; background-color: #F8F8F8 }
+</style>
+<script>
+var DataRow = (function () {
+    var hdr = {}, rows = {}, id, parent, roots = [], bottoms = [], maxHeight = -1, name;
+
+    function DataRow(row, Parent, ID, Name, header) {
+        var current;
+        if (header === undefined) {
+            current = row.split('\t')
+            for (var i in hdr) {
+                this[i] = current[hdr[i]];
+            }
+            if (this[parent] == "" || isNaN(this[parent])) {
+                this.parent = null;
+                this.row = 0;
+                roots.push(this);
+            } else {
+                var p = this[parent];
+                if (rows[p]) {
+                    this.parent = rows[p];
+                    p = this.parent;
+                    if (p.children === undefined) p.children = [];
+                    p.children.push(this);
+                } else this.parent = p;
+            }
+            rows[this[id]] = this;
+        } else {
+            current = header.split('\t');
+            parent = Parent;
+            id = ID;
+            name = Name;
+            for (var i in current) {
+                hdr[current[i]] = i;
+            }
+        }
+        return this;
+    }
+    DataRow.prototype = {
+        get roots() {
+            return roots;
+        },
+        get Bottoms() {
+            if (!bottoms.length) for (var i in rows) {
+                if (rows[i].children === undefined) {
+                    bottoms.push(rows[i]);
+                }
+            }
+            return bottoms;
+        },
+        get Height() {
+            if (!bottoms.length) this.Bottoms;
+            if (maxHeight > -1) return maxHeight;
+            for (var i in bottoms) {
+                var height = 1;
+                var e = bottoms[i];
+                while (e = e.parent) height++;
+                e = bottoms[i];
+                var i = height;
+                while (e) {
+                    e.row = --i;
+                    e = e.parent;
+                }
+                if (height > maxHeight) maxHeight = height;
+            }
+            return maxHeight;
+        },
+        GetTable: function () {
+            SetSpans(this.Bottoms.slice());
+            var tab = document.createElement('TABLE');
+            var last = this.Height--;
+            for (var i = 0; i < last; i++) {
+                tab.appendChild(document.createElement('TR'));
+            }
+            window.no = 0;
+            for (var i in roots) {
+                fillDown(tab, roots[i], 0, 0, last);
+            }
+            var noo = document.createElement("DIV");
+            noo.innerText = no;
+            noo.style.position = "absolute";
+            // tab.rows[0].cells[0].appendChild(noo); // Number of processed elements
+            hdr = {}; rows = {}; roots = []; bottoms = []; maxHeight = -1;
+            return tab;
+        },
+        Reset: function () {
+            hdr = {}; rows = {}; roots = []; bottoms = []; maxHeight = -1;
+        }
+    }
+    var v_lineGif = 'data:image/gif;base64,R0lGODlhAQAKAIAAMQAAAP///ywAAAAAAQAKAAACA4SPBQA7';
+    var whiteGif = 'data:image/gif;base64,R0lGODlhAQABAIIAMQAAAP///wAAAAAAAAAAAAAAAAAAAAAAACH5BAEAAAEALAAAAAABAAEAAgMCGAkAOw==';
+    var blckGif = 'data:image/gif;base64,R0lGODlhAQABAIAAMQAAAP///ywAAAAAAQABAAACAkQBADs=';
+    function fillDown(tab, el, level, s, e) {
+        var cell = document.createElement('TD');
+        var top = '';
+        if (e > 1 && level > 0) {
+            if (s == 0) top = '<img width="50%" height="1" src="'+whiteGif+'"><img width="50%" height="1" src="'+blckGif+'">';
+            else if (s < e - 1) top = '<img width="100%" height="1" src="'+blckGif+'">';
+            else top = '<img width="50%" height="1" src="'+blckGif+'"><img width="50%" height="1" src="'+whiteGif+'">';
+        }
+        this.no++;
+        if (el[name]) cell.innerHTML = top + //'<div style=position:absolute>'+(el.colSpan||'')+'</div>' +
+            (el.parent ? '<img style="padding-bottom: 2px;position:relative;top:-1px" src="'+v_lineGif+'"><br>' : '') +
+            '<DIV '+(el.children?'':'style="margin-bottom:13px"')+'><SPAN>' + el[name].replace(/\s/g, '&nbsp;') + '</SPAN></DIV>' +
+            (el.children?'<img style="padding-top: 3px;" src="'+v_lineGif+'">':'');
+        if (el.colSpan) cell.colSpan = el.colSpan;
+        tab.rows[level].appendChild(cell);
+        for (var i in el.children) {
+            fillDown(tab, el.children[i], level + 1, i, el.children.length);
+        }
+        var skip = this.no;
+        if (el.children === undefined && level + 1 < tab.rows.length) {
+            fillDown(tab, {}, level + 1, [], 1, 1);
+        }
+        this.no = skip;
+    }
+    function SetSpans(nextRow) {
+        for (var i = 0; i < nextRow.length; i++) if (nextRow[i]) {
+            var p = nextRow[i].parent;
+            if (p) {
+                if (p.colSpan === undefined) {
+                    p.colSpan = 0;
+                    for (var j in p.children) {
+                        if (p.children[j].colSpan) p.colSpan += p.children[j].colSpan;
+                        else if (p.children[j].children) p.colSpan += p.children[j].children.length;
+                        else p.colSpan++;
+                        delete nextRow[nextRow.indexOf(p.children[j])];
+                    }
+                }
+                if (p.parent) nextRow.push(p);
+            }
+        }
+    }
+
+    return DataRow;
+})();
+function TSC2Hierarchy(t, d, Id, Parent, Name) {
+    d = d.replace(/\n+$/, '').split('\n');
+    var data = new DataRow(0, Parent, Id, Name, d[0]);
+    for (var i = 1; i < d.length; i++) {
+        new DataRow(d[i]);
+    }
+    for(var a=t.length;a;) {
+        t.removeChild(t[--a]);
+    }
+    t.appendChild(data.GetTable());
+}
+</script>
+<body>
+<form>
+<input type="button" value="Show Content" onclick="TSC2Hierarchy(this.form,this.form.Data.innerHTML, this.form.IdCol.value, this.form.Parent.value, this.form.Content.value);">
+<input name="IdCol" value="EmpNo">
+<input name="Parent" value="ReportsTo">
+<input name="Content" value="Designation">
+<br>
+<textarea name="Data" rows=15 cols=90>EmpNo	Designation	ReportsTo
+10	Director	NULL
+20	Senior Manager	10
+30	Typist	20
+40	Programmer	20
+</textarea>
+</form>
+</body>
