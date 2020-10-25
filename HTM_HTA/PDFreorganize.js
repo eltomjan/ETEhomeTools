@@ -28,13 +28,15 @@ fs.writeFileSync(__filename.split('.')[0] + '_min.js', src);
         if (elDest[elDest.length - 1] !== elMin) elDest.push(elMin);
         elMin = els[i];
     }
+    if (elDest[elDest.length - 1] !== elMin) elDest.push(elMin);
     els = document.getElementsByClassName('textLayer')[0];
     while (els.lastChild) els.removeChild(els.lastChild);
     const elList = [];
     const uqIdx = { x: [], y: [] };
     for (let i = 0; i < elDest.length; i++) {
         const o = document.createElement('INPUT');
-        o.value = elDest[i].text;
+        o.title = elDest[i].text;
+        o.readOnly = true;
         o.setAttribute('style', elDest[i].cssText + 'width:' + elDest[i].w + 'px;position:absolute;');
         els.appendChild(o);
         elList.push([elDest[i].x, elDest[i].x + elDest[i].w, o, elDest[i].y, elDest[i].y + elDest[i].h, elDest[i].text]);
@@ -105,19 +107,25 @@ fs.writeFileSync(__filename.split('.')[0] + '_min.js', src);
         return ac - bc;
     }
     function XL () {
-        const xl = [];
-        for (let y = 0; y < uqIdx.y.length; y++) {
-            const r = [];
-            for (let x = 0; x < uqIdx.x.length; x++)r.push([]);
-            xl.push(r);
-        }
-        for (let i = 0; i < elList.length; i++) {
-            const el = elList[i];
-            xl[uqIdx.y.indexOf(el[3])][uqIdx.x.indexOf(el[0])] = el[2].value;
-        }
-        let str = '';
-        for (let y = 0; y < uqIdx.y.length; y++) {
-            str += xl[y].join('\t').replace(/\t+$/, '') + '\n';
+        let xl = elList[0][5];
+        let xOld = elList[0];
+        const lastXs = [elList];
+        for (let i = 1; i < elList.length; i++) {
+            if (elList[i][0] <= xOld[1] ||
+                elList[i][3] > xOld[4]) {
+                xl += '\n';
+                while (elList[i][0][0] <= lastXs[lastXs.length - 1]) lastXs.pop();
+                while (lastXs.length) {
+                    const e = lastXs.pop();
+                    if (e[1] < elList[i][0]) xl += '\t';
+                }
+                xl += elList[i][5];
+                lastXs.push(elList[i]);
+            } else {
+                xl += '\t' + elList[i][5];
+                lastXs.push(elList[i]);
+            }
+            xOld = elList[i];
         }
         let ta;
         if (document.getElementsByTagName('TEXTAREA').length === 2) ta = document.getElementsByTagName('TEXTAREA')[1];
@@ -127,7 +135,7 @@ fs.writeFileSync(__filename.split('.')[0] + '_min.js', src);
             ta.onblur = removeMe;
             document.body.appendChild(ta);
         }
-        ta.value = str;
+        ta.value = xl;
         ta.focus();
     }
     function removeMe () {
