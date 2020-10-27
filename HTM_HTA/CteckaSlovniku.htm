@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<style>
+* { font: 12px Verdana; }
+div { font: bold 18px Verdana; }
+input { width: 50px; }
+</style>
+<script src="slovnik.json"></script>
+<script>
+let en, els, stop;
+function init() {
+	en = Object.keys(slovnik);
+	els = [document.getElementsByName("twoWords")[0],
+		document.getElementsByName("wordsList")[0],
+		document.getElementsByName("no")[0]
+	];
+	document.getElementsByName("repeat")[0].value = en.length;
+}
+async function learn() {
+	stop = false;
+	let repeats = parseInt(document.getElementsByName("repeat")[0].value);
+	document.body.lastChild.innerText = "";
+	let last;
+	for(let i=0;repeats < 1 || i < repeats;i++) {
+		let pos = parseInt(Math.random() * en.length);
+		if (last === pos) {
+			i--;
+			continue;
+		}
+		last = pos;
+		let ord = parseInt(Math.random() + 0.5);
+		els[2].innerText = (i+1);
+		els[0].innerText = "";
+		if(stop) {
+			els[1].innerText += '──────────────\n';
+			return;
+		}
+		let ew = en[pos] + ';', cs = [];
+		for(let e of slovnik[en[pos]]) {
+			if (e.indexOf('/') > 0) {
+				if (ew.substr(-1) === ';') ew = ew.substr(0, ew.length-1);
+				ew += ',' + e.replace(/\//g, ',');
+			} else cs.push(e);
+		}
+		if (ew.substr(-1) === ';') ew = ew.substr(0, ew.length-1);
+		if (ord) {
+			await sayEn(ew);
+			els[0].innerText += " → ";
+			await sayCs(cs);
+		} else {
+			await sayCs(cs);
+			els[0].innerText += " → ";
+			await sayEn(ew);
+		}
+		els[1].innerText += ew + " " + "←→"[ord] + " " + cs + "\n";
+	}
+
+}
+function sayEn(w) {
+	els[0].innerText += w;
+	let m = new SpeechSynthesisUtterance(w);
+	m.lang='en';
+	let p = new Promise(resolve => {
+    	m.onend = () => resolve();
+  	});
+	speechSynthesis.speak(m)
+	return p;
+}
+function sayCs(w) {
+	w = w.join(',').replace(/\//g, ',');
+	els[0].innerText += w;
+	let m = new SpeechSynthesisUtterance(w.replace(/,/g, ' '));
+	m.lang='cs';
+	m.rate = 2;
+	let p = new Promise(resolve => {
+    	m.onend = () => resolve();
+  	});
+	speechSynthesis.speak(m)
+	return p;
+}
+</script>
+</head>
+<body onload="init()">
+<span name="no"></span> / <input name="repeat">x <button onclick="learn()">Spusť výuku</button>
+<button onclick="stop=true">Zastavit výuku</button>
+<div name="twoWords"></div>
+<span name="wordsList"></span>
+<BR>
+<a href="https://stackoverflow.com/questions/47379725/how-do-i-add-a-voice-language-to-speechsynthesis#47485786">Přidání jazyků TTS do Windows 10</a><BR>
+Zdroj slovíček https://www.ef-czech.cz/pruvodce-anglictinou/slovni-zasoba/3000-slov/<BR>
+Automaticky přeloženo slovníkem z <a href="https://play.google.com/store/apps/details?id=com.dic_o.dico_cze_eng">2.13-dico_cze_eng</a>
+</body>
+</html>
