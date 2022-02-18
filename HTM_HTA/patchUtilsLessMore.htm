@@ -1,0 +1,196 @@
+<script>
+var ta;
+function transformLeft(i)
+{ // - transform function
+    return i.toLocaleLowerCase().replace(/\s+/g, ' ');
+}
+function transformRight(i)
+{ // + transfrom function
+    return i.toLocaleLowerCase().replace(/\s+/g, ' ');
+}
+function MakePlusMinusSame(i)
+{
+    return 'x' + i.substr(1);
+}
+function LastReCompare(tl, tr) // same without any whitespaces ??
+{
+    return tl.join('\n').replace(/\s+/, '') != tr.join('\n').replace(/\s+/, '');
+}
+
+function process(source, t)
+{
+    var res = [], head = { prev:[], now:[], tl:[], tr:[], tempRows:[] }, processed = [[],[]];
+    var lastDiff = null;
+    var r = t.split('\n'); // split rows
+    if (!r[r.length]) r.pop();
+    var counts = null;
+    for(var ix in r) // and iterate them
+    {
+        var i = r[ix];
+        var type = null;
+        if (i.substr(0,5) == 'diff ') { // read and process header infos
+            head = { prev:[], now:[], tl:[], tr:[], tempRows:[] };
+            counts = null;
+            type = 'diff';
+        }
+        else if (i.substr(0,6) == 'index ') type = 'index';
+        else if (i.substr(0,4) == '--- ') type = '---';
+        else if (i.substr(0,4) == '+++ ') type = '+++';
+        else if (i.substr(0,3) == '@@ ') {
+            type = '@@';
+            counts = i.substr(3, i.length - 6).split(' ');
+            if (!head.lines || head['@@'] != i) {
+                head.lines = {
+                    prev: parseInt(counts[0].replace(/.+,/, '').replace(/[+-]/, '')),
+                    now: parseInt(counts[1].replace(/.+,/, '').replace(/[+-]/, ''))
+                };
+            }
+            counts = i; // revert original for block end logic
+            continue;
+        }
+        if (type && !head[type]) {
+            head[type] = i;
+            continue;
+        }
+        if (type == null && !head.lines)
+        {
+            var ignored = {
+                "copy from ": 2,
+                "copy to ": 2,
+                "new mode ": 2,
+                "old mode ": 2,
+                "rename from ": 2,
+                "rename to ": 2,
+                "similarity index ": 2,
+                "dissimilarity index ": 3,
+                "deleted file mode ": 3,
+                "new file mode ": 3
+            };
+            var space = i.indexOf(' ');
+            if (space > 0)
+            { // slip listed if # of words from start equals
+                space++;
+                if (ignored[i.substr(0, space)] == 1)
+                {
+                    continue;
+                }
+                space = i.indexOf(' ', space);
+                space++;
+                if (ignored[i.substr(0, space)] == 2)
+                {
+                    continue;
+                }
+                space = i.indexOf(' ', space);
+                space++;
+                if (ignored[i.substr(0, space)] == 3)
+                {
+                    continue;
+                }
+            }
+            alert("Unexpected content " + i + " !");
+        }
+        head.tempRows.push(i); // collect all diff block rows here
+        var diff = 0;
+        if (i.substr(0,1) == '-')
+        { // removed only, transformed to tl
+            diff--;
+            head.lines.prev--;
+            head.prev.push(MakePlusMinusSame(i));
+            head.tl.push(transformLeft(i.substr(1)));
+        }
+        else if (i.substr(0,1) == '+')
+        { // added only, transformed to tr
+            diff++;
+            head.lines.now--;
+            head.now.push(MakePlusMinusSame(i));
+            head.tr.push(transformRight(i.substr(1)));
+        }
+        else
+        { // put rows around to previous / now versions
+            head.lines.prev--;
+            head.prev.push(i);
+            head.lines.now--;
+            head.now.push(i);
+        }
+        if (diff != 0 & i.substr(1, 11) == "Subproject ")
+        { // nothing to compare here(?)
+            continue;
+        }
+        if (head.lines.prev == 0 && head.lines.now == 0) {
+            if (head.tl.join('\n') != head.tr.join('\n')
+            && LastReCompare(head.tl, head.tr))
+            { // removed vs added differ -> keep that block
+                if (!lastDiff || lastDiff != head.diff)
+                { // but do not repeat its header
+                    lastDiff = head.diff;
+                    res.push(head.diff);
+                    res.push(head.index);
+                    res.push(head['---']);
+                    res.push(head['+++']);
+                }
+                res.push(counts); // @@ -x +x @@
+                res.push(head.tempRows.join('\n')); // original patch text
+                processed[0].push(head.prev.join('\n'));
+                processed[1].push(head.now.join('\n'));
+            }
+            head.tl = []; // clear some info, but keep rest in case there are multiple blocks of changes
+            head.tr = [];
+            head.prev = [];
+            head.now = [];
+            head.tempRows = [];
+            counts = null;
+        }
+    }
+
+    if (source)
+    {
+        writeFile(source + '_Less', processed[0]);
+        writeFile(source + '_More', processed[1]);
+    } else {
+        ta[0].value = processed[0]; // left
+        ta[1].value = processed[1]; // right
+    }
+}
+
+function init()
+{
+    ta = document.getElementsByTagName("TEXTAREA");
+}
+
+function droppper(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    var files = e.dataTransfer.files; // Array of all files
+
+    for (var i=0, file; file=files[i]; i++) {
+        var reader = new FileReader();
+
+        reader.onload = function(e2) {
+            ta[0].value = e2.target.result;
+            process('', ta[0].value);
+        }
+
+        reader.readAsText(file);
+    }
+}
+
+function readFile(filename)
+{
+    var ForReading = 1;
+    var f1 = fso.OpenTextFile(filename, ForReading);
+    var text = f1.ReadAll();
+    f1.close();
+    return text;
+}
+
+function writeFile(filename, content)
+{
+    var TextStream = fso.CreateTextFile(filename);
+    TextStream.Write(content);
+    TextStream.Close()
+}
+</script>
+<body onload="init()">
+<textarea ondrop="droppper(event)" rows=60 cols=120 onchange="process('', this.value)" placeholder="Paste or drop file here&#10;... and receive orig + DELETIONS here"></textarea>
+<textarea rows=60 cols=120 placeholder="And here will be&&#10;... orig + ADDITIONS"></textarea>
+</body>
