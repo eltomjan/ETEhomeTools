@@ -1,6 +1,7 @@
 # El Tom Elzein's - Home Tools
-<table><tbody><tr><th align="left" valign="top">cString&lt;size&gt;</th><td>
-Template class, it has fixed size defined by template parameter, clear structure - (max. size defined by type), has only 2 members - short size and char array with content. Has quick Utf-8 &lt;-&gt; Win1250 conversion feature.
+(all my repos are licensed under GNU LGPL, mind mention repo and author)
+<table><tbody><tr><th align="left" valign="top">String</th><td>
+String class having fixed size, auto join, overloads, data share, quick Utf-8 &lt;-&gt; Win1250 conversion methods.
 </td></tr>
 <tr><th align="left" valign="top">fntXorPacker</th><td>
 Cmd utility - can import GLCD fonts (https://github.com/andygock/glcd), ASCII or its own XORed fonts.<br>
