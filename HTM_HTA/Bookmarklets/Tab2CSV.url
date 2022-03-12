@@ -1,0 +1,8 @@
+[{000214A0-0000-0000-C000-000000000046}]
+Prop3=19,15
+[InternetShortcut]
+IDList=
+URL=javascript:(function(){var table=document.getElementsByTagName("TABLE");var l='';for(var t=0;t<table.length;t++)l+=t+':'+table[t].innerText.substr(0,55).replace(/([\r\n])+/g,'\u21b2')+'\n';if(l)alert(l);table=(table.length>1)?(table[prompt('No ?',table.length-1)]):(table=table[table.length-1]);var row,col,row0,res=[];for(var i=0;row=table.rows[i];i++){var rec=[];for(var j=0;col=row.cells[j];j++){if(!row0)rec.push(col.innerText);else{rec.push(col.innerText);}}if(row0)res.push(rec.join('\t'));else{row0=rec;res.push(row0.join('\t'));}}prompt("",res.join("\r\n"));})()
+HotKey=0
+[Bookmarklet]
+ExtendedURL=javascript:(function(){var table=document.getElementsByTagName("TABLE");var l='';for(var t=0;t<table.length;t++)l+=t+':'+table[t].innerText.substr(0,55).replace(/([\r\n])+/g,'\u21b2')+'\n';if(l)alert(l);table=(table.length>1)?(table[prompt('No ?',table.length-1)]):(table=table[table.length-1]);var row,col,row0,res=[];for(var i=0;row=table.rows[i];i++){var rec=[];for(var j=0;col=row.cells[j];j++){if(!row0)rec.push(col.innerText);else{rec.push(col.innerText);}}if(row0)res.push(rec.join('\t'));else{row0=rec;res.push(row0.join('\t'));}}prompt("",res.join("\r\n"));})()

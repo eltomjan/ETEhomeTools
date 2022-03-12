@@ -1,0 +1,8 @@
+[{000214A0-0000-0000-C000-000000000046}]
+Prop3=19,15
+[InternetShortcut]
+IDList=
+URL=javascript:var oReq = new XMLHttpRequest();oReq.open("GET", "https://raw.githubusercontent.com/drudru/ansi_up/master/ansi_up.js", true);oReq.onloadend = function (oEvent) {new Function(oReq.responseText)();var el=document.getElementsByTagName("PRE")[0];el.innerHTML=(new AnsiUp).ansi_to_html(el.innerText);};oReq.send();document.body.style="color:white;background-color:black";focus();
+HotKey=0
+[Bookmarklet]
+ExtendedURL=javascript:var oReq = new XMLHttpRequest();oReq.open("GET", "https://raw.githubusercontent.com/drudru/ansi_up/master/ansi_up.js", true);oReq.onloadend = function (oEvent) {new Function(oReq.responseText)();var el=document.getElementsByTagName("PRE")[0];el.innerHTML=(new AnsiUp).ansi_to_html(el.innerText);};oReq.send();document.body.style="color:white;background-color:black";focus();
