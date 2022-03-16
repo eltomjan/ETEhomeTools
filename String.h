@@ -31,7 +31,7 @@
 #ifdef DEBUG
 #define STR_LOG printf
 #else
-#define STR_LOG(...)
+#define STR_LOG(s) s
 #endif
 
 typedef int16_t SizeType; // 15b size
@@ -98,6 +98,7 @@ public:
 	RefsSize_t *refsSize;
 #endif // DEBUG
 	SizeType Size() const;
+	SizeType RemainingSize() const;
 	void AddSize(SizeType plus);
 	void SetSize(SizeType newSize);
 
@@ -128,8 +129,8 @@ public:
 	String& operator =(const char* src);
 	String& operator +=(const char *src);
 	const String& operator +=(char src);
-	const String& operator +=(int number);
-	const String& operator +=(long number);
+	inline const String& operator +=(int number) { return operator+=(static_cast<long long>(number)); }
+	inline const String& operator +=(long number) { return operator+=(static_cast<long long>(number)); }
 	const String& operator +=(long long number);
 	String& operator +=(const String& src); // "strcat"
 	String& operator =(const String& src);
@@ -151,14 +152,13 @@ public:
 	inline const char *c_str() const { return m_data.mem; }
 	inline SizeType max_size() const { return m_data.MaxSize(); }
 	SizeType find(int chr, SizeType pos = 0) const;
-	SizeType find4test(const char *chr, SizeType pos = 0, SizeType len = -1) const;
 	SizeType find(const char *chr, SizeType pos = 0) const;
 	SizeType find(const String& str, SizeType pos = 0) const;
 	String substr(SizeType pos = 0, SizeType len = -1);
 	~String();
 	String& upperCase();
 	bool CopyTo(char *dest, SizeType size);
-	bool append(const char *src, SizeType size);
+	void append(const char *src);
 
 	SizeType length() const { return m_data.Size(); }
 	void length(SizeType shorter);

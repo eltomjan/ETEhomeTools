@@ -25,7 +25,9 @@ String::String()
 {}
 
 String::String(SizeType bufSize) : m_data(bufSize)
-{}
+{
+	*m_data.mem = 0;
+}
 
 String::String(const String& src) : m_data(src.m_data)
 {
@@ -39,7 +41,8 @@ void String::Reserve(SizeType size)
 {
 	if (++size == 0)
 	{
-		throw "Reserve size overflow !";
+		throw STR_LOG("Reserve size overflow !");
+		size--;
 	}
 	m_data.Realloc(size);
 }
@@ -56,7 +59,9 @@ String& String::fromUtf(const unsigned char *src)
 	}
 	if (bufSize <= 0) {
 		if (bufSize < -1)
-			throw "String Internal error";
+		{
+			throw STR_LOG("String Internal error");
+		}
 		*(m_data.mem + maxSpace - 1) = 0;
 	}
 	else *ptr = 0;
@@ -79,22 +84,14 @@ String& String::operator +=(const char *src)
 
 const String& String::operator +=(char src)
 {
-	if (m_data.MaxSize() - m_data.Size() < 1) return *this;
+	if (m_data.RemainingSize() < 1)
+	{
+		return *this;
+	}
 	char *ptr = m_data.mem + m_data.Size();
 	*ptr++ = src;
 	m_data.AddSize(1);
 	*ptr = 0;
-	return *this;
-}
-
-const String& String::operator +=(int number)
-{
-	return operator+=(static_cast<long long>(number));
-}
-
-const String& String::operator +=(long number)
-{
-	return operator+=(static_cast<long long>(number));
 	return *this;
 }
 
@@ -103,28 +100,30 @@ const String& String::operator +=(long long number)
 	String retVal;
 	retVal.Reserve(20);
 	retVal.num2str(number);
-	if (m_data.mem != nullptr && retVal.length() && m_data.MaxSize() - m_data.Size() >= retVal.length())
+	if (m_data.mem != nullptr && m_data.RemainingSize() >= retVal.length())
+	{
 		m_data.AddData(retVal.m_data.mem);
+	}
 	return *this;
 }
 
 String& String::operator +=(const String& src)
 {
-	SizeType remainingSize = m_data.MaxSize() - m_data.Size();
-	SizeType srcSize = src.length();
-	if (srcSize > remainingSize) {
-		if (!remainingSize) return *this;
-		m_data.AddData(src.m_data.mem, remainingSize);
-	}
-	else
-	{
-		m_data.AddData(src.m_data.mem, srcSize);
-	}
+	SizeType remainingSize = m_data.RemainingSize();
+	if (!remainingSize) return *this;
+
+	m_data.AddData(src.m_data.mem);
+
 	return *this;
 }
 
 String& String::operator =(const String& src)
 {
+	if (m_data.mem == src.m_data.mem)
+	{
+		return *this;
+	}
+
 	m_data.Assign(src.m_data);
 	return *this;
 }
@@ -229,27 +228,6 @@ SizeType String::find(int chr, SizeType pos) const
 	return ptr - m_data.mem;
 }
 
-SizeType String::find4test(const char *chr, SizeType pos, SizeType len) const
-{
-	char* ptr;
-
-	if (!chr || m_data.Size() <= pos)
-		return npos;
-	if (len < 0) {
-		ptr = strstr(m_data.mem + pos, chr);
-	}
-	else {
-		if (memcmp(m_data.mem + pos, chr, len) == 0) {
-			ptr = m_data.mem;
-		}
-		else ptr = NULL;
-	}
-	if (!ptr)
-		return npos;
-
-	return ptr - m_data.mem;
-}
-
 SizeType String::find(const char *chr, SizeType pos) const
 {
 	char* ptr;
@@ -280,7 +258,7 @@ String String::substr(SizeType pos, SizeType len)
 {
 	if (pos < 0 || pos > m_data.Size())
 	{
-		throw "Invalid string position";
+		throw STR_LOG("Invalid string position");
 	}
 	m_data.SetData(m_data.mem + pos);
 	if (m_data.Size() > len)
@@ -324,11 +302,10 @@ bool String::CopyTo(char *dest, SizeType size)
 	}
 }
 
-bool String::append(const char *src, SizeType addSize)
+void String::append(const char *src)
 {
 	SizeType maxSize = m_data.MaxSize(), size = m_data.Size();
 	m_data.AddData(src, size);
-	return (maxSize >= addSize + size);
 }
 
 char String::decodeUtf(unsigned char **src) {
@@ -394,7 +371,9 @@ String String::to_UTF8()
 	if (maxSize <= 0) {
 		*(dest + maxSize - 1) = 0;
 		if (maxSize < -1)
-			throw "String Internal error";
+		{
+			throw STR_LOG("String Internal error");
+		}
 		maxSize = 0;
 	}
 	const char *sDest = reinterpret_cast<char *>(dest);
@@ -509,7 +488,7 @@ String operator + (const char* _src, const String& _res) {
 	{
 		len2 = String::npos - len - 1;
 	}
-	res.Reserve(static_cast<SizeType>(resLen) + StrData::minSize);
+	res.Reserve(static_cast<SizeType>(_res.max_size() + len2) + StrData::minSize);
 	char *dest = &res[0];
 	memcpy(dest, _src, len2);
 	dest += len2;
@@ -528,8 +507,8 @@ String operator + (const String& _res, const char _src) {
 	return res;
 }
 
-String operator + (const char _src, const String& _res) {
-	String res;
+String operator + (char _src, const String& _res) {
+	String res(_res.max_size());
 	SizeType len = _res.length();
 	if (1 + len > String::npos)
 	{
@@ -554,7 +533,7 @@ StrData::StrData(const char *src)
 	SizeType shorterSize = static_cast<SizeType>(realLen);
 	if (realLen != shorterSize)
 	{
-		throw "String too long !";
+		throw STR_LOG("String too long !");
 	}
 	RefsSize_t *init = reinterpret_cast<RefsSize_t*>(malloc(sizeof(RefsSize_t) + shorterSize));
 	STR_LOG("New %p (%i)\n", init, shorterSize);
@@ -668,6 +647,11 @@ SizeType StrData::Size() const
 	return rs->size;
 }
 
+SizeType StrData::RemainingSize() const
+{
+	return MaxSize() - Size();
+}
+
 void StrData::AddSize(SizeType plus)
 {
 	RefsSize_t *rs = reinterpret_cast<RefsSize_t*>(mem) - 1;
@@ -703,7 +687,7 @@ char &StrData::operator[](int pos)
 {
 	if (pos < 0 || static_cast<unsigned>(pos) >= GetSize(mem))
 	{
-		throw "invalid string position";
+		throw STR_LOG("invalid string position");
 	}
 	return mem[pos];
 }
@@ -742,9 +726,21 @@ void StrData::SetData(const char *src, SizeType limit)
 	SizeType shorterSize = static_cast<SizeType>(realLen);
 	if (mem == nullptr)
 	{
-		Realloc(realLen + minSize - 1);
+#ifndef STRDATA_SIZE_LIMIT
+realloc:
+#endif // !STRDATA_SIZE_LIMIT
+	   size_t reservedLen = realLen + minSize;
+		if (reservedLen != static_cast<SizeType>(reservedLen))
+		{
+			reservedLen -= minSize - 1;
+			if (reservedLen != static_cast<SizeType>(reservedLen))
+			{
+				throw STR_LOG("String too long !");
+			}
+		}
+		Realloc(static_cast<SizeType>(reservedLen));
 	}
-	if (realLen == shorterSize)
+	if (static_cast<SizeType>(realLen) == shorterSize)
 	{
 		SizeType maxSize = static_cast<SizeType>(GetSize(mem));
 		if (shorterSize >= maxSize)
@@ -752,7 +748,7 @@ void StrData::SetData(const char *src, SizeType limit)
 #ifdef STRDATA_SIZE_LIMIT
 			shorterSize = maxSize - 1;
 #else
-			Realloc(realLen + minSize - 1);
+			goto realloc;
 #endif // !STRDATA_SIZE_LIMIT
 		}
 		RefsSize_t *init = reinterpret_cast<RefsSize_t*>(mem) - 1;
@@ -761,7 +757,9 @@ void StrData::SetData(const char *src, SizeType limit)
 		init->size = shorterSize;
 	}
 	else
-		throw "String too long !";
+	{
+		throw STR_LOG("String too long !");
+	}
 }
 
 void StrData::AddData(const char *src, SizeType pos)
@@ -770,7 +768,7 @@ void StrData::AddData(const char *src, SizeType pos)
 	if (mem != nullptr)
 	{
 		RefsSize_t *init = reinterpret_cast<RefsSize_t*>(mem) - 1;
-		SizeType shorterSize = static_cast<SizeType>(realLen + init->size + 1);
+		SizeType shorterSize = static_cast<SizeType>(realLen + init->size);
 		if (mem != nullptr && realLen < static_cast<size_t>(shorterSize))
 		{
 			SizeType maxSize = static_cast<SizeType>(GetSize(mem));
@@ -810,7 +808,7 @@ void StrData::AddData(const char *src, SizeType pos)
 	}
 }
 
-/*
+//* CRT Debug Heap / _CrtMemBlockHeader gap[nNoMansLandSize] / anotherGap[nNoMansLandSize] tests
 void Recreate(String **_tested)
 {
 	String *tested = *_tested;
@@ -832,10 +830,13 @@ void Recreate(String **_tested)
 		memcpy(d2, &(*tested)[0] - shift, size + shift + 8);
 		if (memcmp(d1, d2, size))
 		{
-			__debugbreak();
-			//data += sizeof(int); data2 += sizeof(int);
-			//data += sizeof(SizeType); data2 += sizeof(SizeType);
-			//data += sizeof(SizeType); data2 += sizeof(SizeType);
+#ifndef STRDATA_SIZE_LIMIT
+			StrData::RefType &r1 = *reinterpret_cast<StrData::RefType*>(d1 + 4), &r2 = *reinterpret_cast<StrData::RefType*>(d2 + 4);
+			r2 = r1;
+			if (!memcmp(d1, d2, size))
+				return;
+#endif
+			STR_LOG("Recreate %p difference ??\n", &(*tested)[0] - shift + 4);
 		}
 	}
 }
@@ -876,7 +877,8 @@ void SmallTest()
 		Recreate(&a);
 		Recreate(&b);
 	}
-	*a = "abc"; *b = "def"; *c = "1234";
+	*a = "abc"; *b = "def";
+	*c = "1234";
 	if (!(*a < *b) || !(*b > *c) ||
 		!(*a <= *b) || !(*b >= *c) ||
 		(*a == *b) || !(*b != *c) ||
@@ -892,18 +894,27 @@ void SmallTest()
 	}
 
 	*d = "Index out of string.";
+	String f = "Index out of string.";
 	int good = 0;
 	try {
 		(*c)[-1];
 		good--;
-	} catch (const char * e) {
+	} catch (char * e) {
 		good++;
+#ifndef STRDATA_SIZE_LIMIT
 		if (*d == e)
+#else
+		if (f == e)
+#endif
 			try {
 				(*c)[4];
 				good--;
 			} catch (const char * e) {
+#ifndef STRDATA_SIZE_LIMIT
 				if (*d == e)
+#else
+				if (f == e)
+#endif
 					good++;
 			}
 		else good--;
@@ -913,7 +924,18 @@ void SmallTest()
 	a->num2str(INT_MIN);
 	b->num2str(INT_MAX);
 	c->num2str(0);
+#ifdef STRDATA_SIZE_LIMIT
 	if (*a != "-21474836" || *b != "214748364" || *c != "0")
+#else
+	if (*a != "-2147483648" || *b != "2147483647" || *c != "0")
+#endif
 		throw "num2str";
+	*c += '1' + *c + '2'; // keep max + minSize == 11
+	if (*c != "0102")
+		throw "1 + 0 + 2 ?!";
+	*c += "2" + *c + "3";
+	if (*c != "0102201023")
+		throw "xxx ?!";
+	Recreate(&a); Recreate(&b); Recreate(&c); Recreate(&d);
 };
-*/
+// */
