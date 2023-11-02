@@ -1,0 +1,152 @@
+<!--
+Sub OpenInFireFoxNewTab(url As String)
+  Dim pathFireFox As String
+  pathFireFox = "...\chrome.exe"
+  If Dir(pathFireFox) = "" Then pathFireFox = "...\chrome.exe"
+  Shell """" & pathFireFox & """" & " -new-tab " & url, vbHide
+End Sub
+
+Sub CopyData()
+    Range("A2").Select
+    Range(Selection, ActiveCell.SpecialCells(xlLastCell)).Select
+    Selection.Copy
+    Range("D3").Select
+    OpenInFireFoxNewTab ".../Stravenky.htm"
+End Sub
+-->
+<html>
+<head>
+<script>
+var prispevekZamestnance = 50; // Kč
+var minulyMesicMax = 6; // od kterého data aktuální měsíc
+var csv = [], csvTemplate = [1,"Jméno","Příjmení","","","","","","","","","",21,123];
+window.TextEncoder = null;  
+</script>
+<script src="lib/encoding-indexes.js"></script>
+<script src="lib/encoding.js"></script>
+<script>
+function process()
+{
+    var radky = event.srcElement.value.split('\n');
+    radky[0] = radky[0].split('\t');
+    var mesice = [3, 0]; // prvni, pocet
+    var i = mesice[0];
+    while(!isNaN(parseInt(radky[0][i++]))) mesice[1]++;
+    for(var s=1;s<radky.length;s++) {
+        radky[s-1] = radky[s].split('\t').slice(0, mesice[0]+mesice[1]);
+    }
+    var r;
+    while (isNaN(parseInt(r = radky.pop())));
+    radky.push(r);
+    var sum = [0,0,0]
+    for(var r of radky)
+    {
+        var s = r.slice(3).join('+'). // součet sloupců
+            replace(/[^A^+]/g, ''). // nech jen A a +
+            replace(/\++/g,''); // smaž +
+        r[3] = s.length;
+        r[4] = (s.length * prispevekZamestnance);
+    }
+    var t = document.getElementsByTagName("table")[0];
+    var radkyTridene = radky.sort(function podleJmena(a,b) {
+        return a[2].localeCompare(b[2], 'cz', { sensitivity: 'variant' });
+    })
+    for(var r of radkyTridene)
+    {
+        if (!r[1]) continue; // 2. nemá evidenční číslo v datech
+        var tr = document.createElement("tr");
+        for(var c=1;c<5;c++)
+        {
+            var td = document.createElement("td");
+            td.innerText = r[c];
+            tr.appendChild(td);
+        }
+        t.appendChild(tr);
+        csvTemplate[0] = r[1];
+        csvTemplate[1] = r[2].split(' ')[0];
+        csvTemplate[2] = r[2].substring(r[2].indexOf(' ') + 1);
+        csvTemplate[csvTemplate.length - 2] = r[3];
+        csv.push(csvTemplate.join(';'));
+        sum[0] += r[3];
+        sum[1] += r[4];
+        sum[2]++;
+    }
+    var tr = document.createElement("tr");
+    var td = document.createElement("td");
+    tr.appendChild(td);
+    td.innerText = sum[2];
+    var td = document.createElement("td");
+    tr.appendChild(td);
+    td.innerHTML = "<B>CELKEM</B>"
+    tr.appendChild(td);
+    var td = document.createElement("td");
+    td.innerText = sum[0];
+    tr.appendChild(td);
+    var td = document.createElement("td");
+    td.innerText = sum[1];
+    tr.appendChild(td);
+    t.appendChild(tr);
+}
+var mesicText;
+function mesic()
+{
+    var datumDo = new Date();
+    if (datumDo.getDate() < minulyMesicMax) datumDo.setDate(datumDo.getDate() - datumDo.getDate());
+    mesicText = (datumDo).toLocaleString('default', { month: 'long' });
+    var t = document.getElementsByTagName("table")[0];
+    t.rows[0].cells[1].innerText = mesicText;
+    document.getElementsByTagName("textarea")[0].focus();
+}
+function download (content, filename, contentType) {
+    if(!contentType) contentType = 'application/octet-stream';
+        var a = document.createElement('a');
+        var blob = new Blob([content], {'type':contentType});
+        a.href = window.URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+}
+function showCSV()
+{
+    var encoded = new TextEncoder("windows-1250",{ NONSTANDARD_allowLegacyEncoding: true }).encode(csv.join("\r\n"));
+    download(encoded, mesicText + ".csv");
+}
+</script>
+<meta charset="utf-8">
+<style>
+body { margin:0px; }
+table {
+    border: solid #000 !important;
+    border-width: 1px 0 0 1px !important;
+    border-collapse: collapse;
+    table-layout: fixed;}
+th, td {
+    border: solid #000 !important;
+    border-width: 0 1px 1px 0 !important;
+    padding: 3px;
+}
+@media print {
+    textarea, button {
+        display: none;
+    }
+}
+</style>
+</head>
+<body onload="mesic()">
+<textarea onblur="process()" placeholder="Vložit sem !" style="width: 100%;"></textarea>
+<button onclick="showCSV()">CSV</button>
+<table>
+<tr>
+<td colspan="3">Počet stravenek dle Evidence pracovní doby</td>
+<td contenteditable="true"></td>
+</tr>
+<tr>
+<td>os.č.</td>
+<td>Jméno zaměstnance</td>
+<td>Počet<br>
+stravenek</td> 
+<td>Ze mzdy<br>
+staženo</td>  
+</tr>
+</table>
+</body>
+</html>
