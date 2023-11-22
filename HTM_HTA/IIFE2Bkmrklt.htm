@@ -1,0 +1,35 @@
+<html>
+<head>
+<script>
+function packTa(t)
+{
+    var src = t.value;
+    src = 'javascript:' + src;
+    debugger;
+    src = src.replace(/\s*\n\s*/g, '\n')
+        .replace(/\/\/.+\n/g, "")
+        .replace(/([,;{}\)])\s*\n/g, '$1')
+        .replace(/\n\s*([,;{}\()])/g, '$1')
+        .replace(/([|&^])\s*\n/g, '$1')
+        .replace(/\n\s*([|&^])/g, '$1')
+    t.value = src;
+}
+function loadIt()
+{
+var file = document.getElementById("myFile").files[0];
+
+var reader = new FileReader();
+reader.onload = function (e) {
+    var textArea = document.getElementsByTagName("textarea")[0];
+    textArea.value = e.target.result;
+    packTa(textArea);
+};
+reader.readAsText(file);
+}
+</script>
+</head>
+<body>
+<input id="myFile" type="file" onchange="loadIt();">
+<textarea style="width: 100%;height: 100%"></textarea>
+</body>
+</html>

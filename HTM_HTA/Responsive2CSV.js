@@ -9,9 +9,15 @@
                 if (node.nodeType == 3) {
                     if (node.parentElement.getClientRects().length)
                     {
+                        let text = node.nodeValue;
+                        while (node.nextSibling && node.nextSibling.nodeType == 3) // merge split text nodes
+                        {
+                            node = node.nextSibling;
+                            text += node.nodeValue;
+                        }
                         let node2 = node;
                         while (node2.parentElement.childNodes.length <= 1) node2 = node2.parentElement; // find highest parent
-                        while (node2.parentElement.innerText == node2.innerText) node2 = node2.parentElement; // ignore invisible siblings text
+                        while (node2.parentElement.innerText == text) node2 = node2.parentElement; // ignore invisible siblings text
                         if (node2.parentElement != srcNode && !text_nodes.includes(node2) && node2.nodeType != 3) // first time, no text
                             text_nodes.push(node2);
                     }
