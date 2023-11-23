@@ -14,6 +14,10 @@ namespace HstImport
         {
             dataPos = 0;
             header = new Header(br);
+            if (header.rows == 0)
+            {
+                header.rows = (int)(br.BaseStream.Length - br.BaseStream.Position) / Row.Size;
+            }
             data = new Row[header.rows];
             for (int i = 0; i < header.rows; i++)
             {

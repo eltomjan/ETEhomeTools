@@ -27,8 +27,8 @@ namespace HstImport
             timesign = Symbol.time_t2date(br.ReadUInt32());
             last_sync = Symbol.time_t2date(br.ReadUInt32());
             rows = br.ReadInt32();
-            unused = new Int32[13];
-            for (int i = 0; i < 13; i++)
+            unused = new Int32[12];
+            for (int i = 0; i < 12; i++)
             {
                 unused[i] = br.ReadInt32();
             }

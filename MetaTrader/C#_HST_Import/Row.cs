@@ -15,7 +15,7 @@ namespace HstImport
         static public int Size {
             get
             {
-                return 48;
+                return 60;
             }
         }
 
@@ -27,7 +27,9 @@ namespace HstImport
             high = br.ReadDouble();
             low = br.ReadDouble();
             close = br.ReadDouble();
-            volume = br.ReadDouble();
+            volume = br.ReadInt32();
+            tmp = br.ReadUInt64();
+            tmp = br.ReadUInt64();
             if (extremes == null)
             {
                 extremes = new Row();
