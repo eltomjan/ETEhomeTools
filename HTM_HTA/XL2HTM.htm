@@ -1,33 +1,67 @@
 <!--
-Sub OpenInFireFoxNewTab(url As String)
-  Dim pathFireFox As String
-  pathFireFox = "...\chrome.exe"
-  If Dir(pathFireFox) = "" Then pathFireFox = "...\chrome.exe"
-  Shell """" & pathFireFox & """" & " -new-tab " & url, vbHide
-End Sub
+xpdf-tools-win-4.04\bin64\pdftotext.exe -lineprinter -enc UTF-8 %1
 
-Sub CopyData()
+C1=POSUN(D2;MĚSÍC(NYNÍ()) + KDYŽ(DEN(NYNÍ()) <B2;-1;0)-1;0) & " " & ROK(NYNÍ()) + KDYŽ(DEN(NYNÍ()) < B2;-1;0) & ".htm"
+Function GetClipBoardText()
+   Dim DataObj As MSForms.DataObject
+   Set DataObj = New MSForms.DataObject '<~~ Amended as per jp's suggestion
+
+   On Error GoTo Whoa
+
+   '~~> Get data from the clipboard.
+   DataObj.GetFromClipboard
+
+   '~~> Get clipboard contents
+   GetClipBoardText = DataObj.GetText(1)
+
+   Exit Function
+Whoa:
+   If Err <> 0 Then MsgBox "Data on clipboard is not text or is empty"
+End Function
+Sub WriteFile(sFileName, text)
+    Dim fsT As Object
+    Set fsT = CreateObject("ADODB.Stream")
+    fsT.Type = 2 'Specify stream type - we want To save text/string data.
+    fsT.Charset = "utf-8" 'Specify charset For the source text data.
+    fsT.Open 'Open the stream And write binary data To the object
+    fsT.WriteText text
+    fsT.SaveToFile sFileName, 2 'Save binary data To disk
+    fsT.Close
+End Sub
+Sub Verze3()
+    Dim txt
     Range("A2").Select
     Range(Selection, ActiveCell.SpecialCells(xlLastCell)).Select
     Selection.Copy
     Range("D3").Select
-    OpenInFireFoxNewTab ".../Stravenky.htm"
+    
+    txt = GetClipBoardText()
+    Page = ThisWorkbook.Worksheets("Nastaveni+JS").Range("B4").Value
+    htm = Split(Page, "€")
+    htm = htm(0) + CStr(ThisWorkbook.Worksheets("Nastaveni+JS").Range("B3").Value) + htm(1) _
+    + CStr(ThisWorkbook.Worksheets("Nastaveni+JS").Range("B2").Value) + htm(2) _
+    + txt + htm(3)
+    htmPath = ThisWorkbook.Worksheets("Nastaveni+JS").Range("B1").Value + ThisWorkbook.Worksheets("Nastaveni+JS").Range("C1").Value
+    WriteFile htmPath, htm
+    Shell "cmd.exe /C " + (Chr(34) + htmPath + Chr(34))
 End Sub
 -->
 <html>
 <head>
 <script>
-var prispevekZamestnance = 50; // Kč
-var minulyMesicMax = 6; // od kterého data aktuální měsíc
+var prispevekZamestnance = €;
+var minulyMesicMax = €;
 var csv = [], csvTemplate = [1,"Jméno","Příjmení","","","","","","","","","",21,123];
 window.TextEncoder = null;  
 </script>
 <script src="lib/encoding-indexes.js"></script>
 <script src="lib/encoding.js"></script>
 <script>
-function process()
+var xlData = {};
+function process(t)
 {
-    var radky = event.srcElement.value.split('\n');
+    var xlLabels = ["JMENO","POC","OST.SRAZ"];
+    var radky = t.split('\n');
     radky[0] = radky[0].split('\t');
     var mesice = [3, 0]; // prvni, pocet
     var i = mesice[0];
@@ -36,14 +70,14 @@ function process()
         radky[s-1] = radky[s].split('\t').slice(0, mesice[0]+mesice[1]);
     }
     var r;
-    while (isNaN(parseInt(r = radky.pop())));
+    while (radky.length && isNaN(parseInt(r = radky.pop())));
     radky.push(r);
     var sum = [0,0,0]
     for(var r of radky)
     {
-        var s = r.slice(3).join('+'). // součet sloupců
-            replace(/[^A^+]/g, ''). // nech jen A a +
-            replace(/\++/g,''); // smaž +
+        var s = r.slice(3).join('+'). // sum A-s in columns
+            replace(/[^A^+]/g, ''). // keep A & +
+            replace(/\++/g,''); // delete multiple +
         r[3] = s.length;
         r[4] = (s.length * prispevekZamestnance);
     }
@@ -53,10 +87,15 @@ function process()
     })
     for(var r of radkyTridene)
     {
-        if (!r[1]) continue; // 2. nemá evidenční číslo v datech
+        if (!r[1]) continue; // 2. ocasion / without ID
         var tr = document.createElement("tr");
         for(var c=1;c<5;c++)
         {
+            if (c == 1) {
+                xlData[r[1]] = { tabRow: t.rows.length };
+            } else {
+                xlData[r[1]][xlLabels[c-2]] = r[c];
+            }
             var td = document.createElement("td");
             td.innerText = r[c];
             tr.appendChild(td);
@@ -95,7 +134,10 @@ function mesic()
     mesicText = (datumDo).toLocaleString('default', { month: 'long' });
     var t = document.getElementsByTagName("table")[0];
     t.rows[0].cells[1].innerText = mesicText;
-    document.getElementsByTagName("textarea")[0].focus();
+    var ta = document.getElementsByTagName("textarea")[0];
+    ta.focus();
+
+    process(ta.value)
 }
 function download (content, filename, contentType) {
     if(!contentType) contentType = 'application/octet-stream';
@@ -105,10 +147,215 @@ function download (content, filename, contentType) {
         a.download = filename;
         a.click();
 }
+function fallbackCopyTextToClipboard(text) {
+  var textArea = document.createElement("textarea");
+  textArea.value = text;
+  
+  // Avoid scrolling to bottom
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    var successful = document.execCommand('copy');
+    var msg = successful ? 'successful' : 'unsuccessful';
+    console.log('Fallback: Copying text command was ' + msg);
+  } catch (err) {
+    console.error('Fallback: Oops, unable to copy', err);
+  }
+
+  document.body.removeChild(textArea);
+}
+function copyTextToClipboard(text) {
+  if (!navigator.clipboard) {
+    fallbackCopyTextToClipboard(text);
+    return;
+  }
+  navigator.clipboard.writeText(text).then(function() {
+    console.log('Async: Copying to clipboard was successful!');
+  }, function(err) {
+    console.error('Async: Could not copy text: ', err);
+  });
+}
 function showCSV()
 {
+    copyTextToClipboard(csv.join('\n'));
     var encoded = new TextEncoder("windows-1250",{ NONSTANDARD_allowLegacyEncoding: true }).encode(csv.join("\r\n"));
     download(encoded, mesicText + ".csv");
+}
+
+function processRow(r, o)
+{
+    var rec = o.records.length ? o.records[o.records.length - 1] : undefined;
+    console.log(o.state, r);
+    if (o.state == 2 && r.match(/\s+\*+(\d+)\*+/)) o.state--;
+    switch(o.state)
+    {
+        case 0: // header
+            if (!r) return;
+            const org = "Základní umělecká";
+            if (r.indexOf(org) > -1)
+            {
+                r = r.substr(r.indexOf(org) + org.length);
+                let date = r.match(/(\S+\s+\d+)/);
+                rec = { OBDOBI: date[1], CISLO:0, JMENO:0, VS: '?', PLATh: '?', DOV: '?', KSTR: '?', PRIP: '?', PD: '?', UVA: '?' };
+                let items = r.match(/\s+(\S+):\s+(\d+)/g);
+                for(var i of items)
+                {
+                    let key = i.match(/(\S+):/)[1];
+                    if (key == "PLAT") key += 'h';
+                    rec[key] = i.match(/:\s*(\S+)/)[1];
+                }
+                o.records.push(rec);
+                break;
+            } else {
+                if (rec && rec.OBDOBI)
+                {
+                    let ids = r.match(/(\d+)\s+([^:]+)\s+\S+:/)
+                    rec.CISLO = ids[1];
+                    rec.JMENO = ids[2];
+                    let items = r.match(/\s+(\S+):\s+(\d+)/g);
+                    for(var i of items)
+                    {
+                        rec[i.match(/(\S+):/)[1]] = i.match(/:\s*(\S+)/)[1];
+                    }
+                    o.state++;
+                    break;
+                }
+            }
+        case 1: // start (page)
+            var recNo = r.match(/\s+\*+(\d+)\*+/);
+            if (recNo && recNo.length == 2 && o.state) {
+                rec.strana = recNo[1];
+            } else  if (!o.state)
+            {
+                rec = { CISLO:"?", JMENO:"? ?"};
+                o.records.push(rec);
+                o.state++;
+            }
+            o.state++;
+            break;
+        case 2: // labels
+            var names = r.trim().match(/(\S+)/g);
+            o.nameLinks = {};
+            for(var n of names) {
+                o.nameLinks[r.indexOf(n) + n.length] = n;
+            }
+            o.state++;
+            break;
+        case 3: // content
+            var pos = 0, nums = [];
+            let check = r.match(/^-+$/);
+            let check2 = r.match(/^=+$/);
+            if (check2 && check2.length == 1)
+            {
+                o.state = 0;
+                return;
+            }
+            if (check && check.length == 1) {
+                r = "";
+                o.state--;
+            } else {
+                for(var i in o.nameLinks)
+                {
+                    nums.push(
+                        rec[o.nameLinks[i]] = r.substr(pos, i - pos).trim()
+                    );
+                    pos = i;
+                }
+                o.state++;
+            }
+            break;
+        case 4: // labels / header jump
+            if (r.match(/\s*-+/)) o.state -= 2;
+            else if (r.match(/\s*=+/)) o.state = 0;
+            break;
+        default:
+            alert("Neočekávaný stav ??");
+            debugger;
+    }
+}
+var res = { state:0, records:[] };
+function readCompTXT(t)
+{
+    var xlTable = document.getElementsByTagName("table")[0];
+    let i = t.replace(/\f/g, "\n")
+        .replace(/\n+$/, "")
+        .split('\n');
+    for(var r of i) processRow(r, res);
+    let elements = Object.keys(res.records[0]);
+    let txt = elements.join('\t').replace(/_hash_\t/, "") + '\n';
+    let pos = 0;
+    let sum = 0;
+    let missing = [];
+    let pdfDB = {};
+    for(var r of res.records)
+    {
+        pdfDB[r.CISLO] = [r.OBDOBI, r.CISLO, r.JMENO, r.POC, r["OST.SRAZ"]];
+        xlItem = xlData[r.CISLO];
+        if (!xlItem) {
+            missing.push([r.OBDOBI, r.CISLO, r.JMENO, '?' + r["OST.SRAZ"] + '!'].join('\t'));
+        } else {
+            var xlRow = xlTable.rows[xlItem.tabRow];
+            var td = document.createElement("td");
+            td.innerText = r["OST.SRAZ"];
+            xlRow.appendChild(td);
+            td.bgColor = (r["OST.SRAZ"] == xlItem["OST.SRAZ"]) ? "#00FF00" : "#FF0000";
+            var no = r["OST.SRAZ"]
+            no = no.trim() ? parseInt(no) : 0;
+            sum += no;
+        }
+        pos++;
+        if (elements.join('\t') != Object.keys(r).join('\t'))
+        {
+            alert("Různé položky ??");
+            debugger;
+            throw -1;
+        }
+        var cols = [];
+        for(let i of elements)
+        {
+            if (i != "_hash_")
+                cols.push(r[i]);
+        }
+        txt += cols.join('\t') + '\n';
+    }
+    var taS = document.getElementsByTagName("textarea");
+    if (missing) {
+        taS[2].value = missing.join('\n');
+    }
+    missing = [];
+    for(var xlRow in xlData)
+    {
+        if (!pdfDB[xlRow])
+        {
+            missing.push([xlData[xlRow].OBDOBI, xlRow, xlData[xlRow].JMENO, xlData[xlRow]["OST.SRAZ"]].join('\t'));
+        }
+    }
+    if (missing) {
+        taS[1].value = missing.join('\n');
+    }
+    var td = document.createElement("td");
+    td.innerText = sum;
+    var sumRow = xlTable.rows[xlTable.rows.length-1];
+    td.bgColor = (sumRow.cells[3].innerText == sum) ? "#00FF00" : "#FF0000";
+    sumRow.appendChild(td);
+}
+function loadTxt()
+{
+    var file = event.srcElement.files[0];
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        readCompTXT(e.target.result
+            .replace(/\r\n/g, '\n')
+        );
+    };
+    reader.readAsText(file);
 }
 </script>
 <meta charset="utf-8">
@@ -118,22 +365,31 @@ table {
     border: solid #000 !important;
     border-width: 1px 0 0 1px !important;
     border-collapse: collapse;
-    table-layout: fixed;}
+    table-layout: fixed;
+    float: left;
+}
 th, td {
     border: solid #000 !important;
     border-width: 0 1px 1px 0 !important;
     padding: 3px;
 }
+textarea:first-of-type {
+    display: none;
+}
+button {
+    padding: 15px;
+    background-color: lightgreen;
+    margin: 3px;
+}
 @media print {
-    textarea, button {
+    textarea, button, input {
         display: none;
     }
 }
 </style>
 </head>
 <body onload="mesic()">
-<textarea onblur="process()" placeholder="Vložit sem !" style="width: 100%;"></textarea>
-<button onclick="showCSV()">CSV</button>
+<textarea onblur="process()" placeholder="Vložit sem !" style="width: 100%;">€</textarea>
 <table>
 <tr>
 <td colspan="3">Počet stravenek dle Evidence pracovní doby</td>
@@ -148,5 +404,10 @@ stravenek</td>
 staženo</td>  
 </tr>
 </table>
+<button onclick="showCSV()"><font size="4">Stáhnout <b>CSV</b></font><br><br>(zkopíruje obsah<br>i do clipboardu)</button>
+<input type="file" onchange="loadTxt()">
+<br>
+<textarea rows="20" cols="70"></textarea>
+<textarea rows="20" cols="70"></textarea>
 </body>
 </html>
