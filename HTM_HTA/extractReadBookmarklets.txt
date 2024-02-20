@@ -1,0 +1,12 @@
+Edge
+https://stackoverflow.com/questions/71077211/simple-javascript-bookmarklet-not-working-on-edge-compatibility-mode-ie11
+While testing you should use the Bookmarks toolbar (Ctrl+Shift+B) instead of the Favorites sidebar (Ctrl+Shift+O).
+Bookmarklets work when clicked on the Bookmarks toolbar and don't do anything when clicked from the Favorites sidebar.
+
+Inspired by
+https://stackoverflow.com/questions/106425/load-external-js-from-bookmarklet/57921981#57921981
+https://stackoverflow.com/questions/61274853/is-it-possible-to-save-form-data-to-a-data-file-on-the-local-computer-and-then-r/61320219#61320219
+Responsive2CSV.js
+
+javascript:r=new XMLHttpRequest();r.open("GET","https://raw.githubusercontent.com/eltomjan/ETEhomeTools/master/HTM_HTA/extractData.js",true);r.onloadend=function(oEvent){new Function(r.responseText)()};r.send();undefined
+javascript:r=new XMLHttpRequest();r.open("GET","https://raw.githubusercontent.com/eltomjan/ETEhomeTools/master/HTM_HTA/readForm.js",true);r.onloadend=function(oEvent){new Function(r.responseText)()};r.send();undefined
