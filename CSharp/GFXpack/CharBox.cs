@@ -464,5 +464,26 @@ namespace XorPack
             m_step = 2;
             return ((m_height & 1) == 0);
         }
+
+        /// <summary>
+        /// Debug info
+        /// </summary>
+        /// <returns>
+        /// Content converted to ASCII 
+        /// </returns>
+        public override string ToString()
+        {
+            if (box == null) return "";
+            int height = box.Length;
+            int width = box[0].Width;
+            String[] rows = new String[m_height];
+            for (int j = 0; j < height; j++)
+            {
+                rows[j] = (box[j].ToString().Substring(0, width));
+            }
+            string res = width.ToString("X2") + "x" + height.ToString("X2") + Environment.NewLine +
+                String.Join(Environment.NewLine, rows) + Environment.NewLine;
+            return res;
+        }
     }
 }
