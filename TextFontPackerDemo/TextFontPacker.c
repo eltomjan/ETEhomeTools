@@ -10,7 +10,7 @@ int main(void)
 	{
 		FILE *dest;
 		fopen_s(&dest, "webLog.htm", "wt");
-		fprintf(dest, "<style>br{line-height: 10px;}div{float:left;height: 10px;width: 10px;}div#\\30{background-color: #bfb;}div#\\30 0e{background-color: #dfd;}div#\\31{background-color: #f00;}div#\\30 0{background-color: #bdb;}div#\\31 0{background-color: #f88;}div#\\30 00{background-color: #0f0;}</style>");
+		fprintf(dest, "<style>br{line-height: 10px;}div{float:left;height:10px;width:10px;font-size:10px;font-family:math;font-weight:bold;color:#ffa;}div#\\30{background-color: #bfb;}div#\\30 0e{background-color: #dfd;}div#\\31{background-color: #f00;}div#\\30 0{background-color: #bdb;}div#\\31 0{background-color: #f88;}div#\\30 00{background-color: #0f0;}</style>");
 		fprintf(dest, "Char\n  Block\tOrig->Packed\tRatio\n<br>");
 		unsigned long originalSize = 0;
 		unsigned long packedSize = 0;
