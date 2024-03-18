@@ -49,7 +49,7 @@ namespace XorPack
                 box[y] = new CharRow(width/8 + Convert.ToByte((width&7) > 0));
                 box[y].Width = width;
                 for(int x=0;x<width;x++) {
-                    if((data[pos] & mask) != 0) {
+                    if(data.Length > pos && (data[pos] & mask) != 0) {
                         box[y].setBit(x);
                     }
                     if(mask > 1) {
@@ -63,7 +63,8 @@ namespace XorPack
             }
             Byte[] check = getGFXmap();
             for(int i=0;i<check.Length;i++) {
-                if(check[i] != data[startPos+i]) {
+                if ((data.Length > startPos + i && check[i] != data[startPos + i])
+                    || check[i] != 0) {
                     Console.WriteLine("Difference " + check[i] + data[startPos+i]);
                 }
             }
@@ -265,157 +266,6 @@ namespace XorPack
             return val.Split('\n');
         }
 
-        public int getDynamicBitSize(bool reverse)
-        {
-            if(box == null)
-                return 0;
-            return getFixedBitSize(box[0].Width, m_height, reverse);
-        }
-
-        public static int maxZeros = 0;
-        public int[] prepareEncoding(int w, int h, out Byte zeroNoSize, out int zeroBlocks, out int ones) {
-            int[] bits = getBitsNr(getGFXmap());
-            int min = 0;
-            ones = 0; zeroBlocks = 0;;
-            for(int i=0;i<bits[0];i++) {
-                if(bits[i+1] < min) {
-                    min = bits[i+1];
-                }
-                if(bits[i+1] < -1) zeroBlocks++; // 1 zero not encoded
-                else ones += bits[i+1];
-            }
-            zeroNoSize = (Byte)(Math.Log(-min-1)/Math.Log(2)+0.99); // bits to encode max zero #
-            if(maxZeros < -min) maxZeros = -min;
-            System.Array.Resize(ref bits, bits[0] + 1);
-            return bits;
-        }
-        public String getPackedStream(int w, int h, bool decorated) {
-            String retVal;
-            Byte zeroNoSize;
-            int zeroBlocks, ones;
-            int[] bits = prepareEncoding(w,h, out zeroNoSize, out zeroBlocks, out ones);
-            retVal = Convert.ToString(zeroNoSize, 2).PadLeft(4, '0'); // bit size 4 # of 0-s
-            if(decorated) retVal += ' ';
-            for(int i=0;i<bits[0];i++) {
-                int block = bits[i+1];
-                if(block > 0) {
-                    retVal += new String('1', block); // recreate 1s
-                } else if (block < -1) {
-                    if(decorated) retVal += ' ';
-                    retVal += Convert.ToString(-block-2, 2).PadLeft(zeroNoSize + 2, '0'); // 00#ofzeros
-                    if(decorated) retVal += "*0 ";
-                } else if(block == -1) {
-                    retVal += '0'; // 1 zero
-                } else throw new Exception("Bad repeat #");
-            }
-            return retVal;
-        }
-        public String decodeStringStream(String packed)  {
-            int width = box[0].Width;
-            String unpackedStream = "";
-            int pos = 4;
-            Byte zeroNoSize = Convert.ToByte(packed.Substring(0,pos), 2);
-            String debug = getPackedStream(box[0].Width, box.Length, true) + Environment.NewLine +
-                "Zeros # has " + zeroNoSize + "b (+2):";
-            for(;pos<packed.Length;pos++) {
-                if(packed[pos] == '1') {
-                    unpackedStream += '1';
-                    debug += "1" + Environment.NewLine;
-                } else if(packed[pos] == '0') {
-                    if((packed.Length > (pos + 1)) && (packed[pos+1] == '0')) {
-                        pos += 2; // skip compression prefix
-                        UInt16 zeroNo = Convert.ToUInt16(packed.Substring(pos, zeroNoSize), 2);
-                        zeroNo += 2;
-                        unpackedStream += new String('0', zeroNo);
-                        pos += zeroNoSize - 1;
-                        debug += zeroNo + "x 0" + Environment.NewLine;
-                    } else {
-                        unpackedStream += '0';
-                        debug += "0" + Environment.NewLine;
-                    }
-                }
-            }
-            String[] orig = getASCII();
-            String transl = "";
-            foreach(var r in orig) {
-                transl += r.Substring(0, width).Replace('░', '0').Replace('█', '1') + Environment.NewLine;
-            }
-            String retVal = "";
-            for(int i=0;i<unpackedStream.Length;i+=width) {
-                if(i+width <= unpackedStream.Length) {
-                    retVal += unpackedStream.Substring(i, width) + Environment.NewLine;
-                } else {
-                    retVal += unpackedStream.Substring(i) + '!' + Environment.NewLine;
-                }
-            }
-            if(transl != retVal) {
-                throw new Exception("Decode error");
-            }
-            return /*retVal +*/ debug;
-        }
-        public int getFixedBitSize(int w, int h, bool reverse)
-        {
-            int retVal = 0;
-            if(w + h == -2) {
-                Byte zeroNoSize;
-                int zeroBlocks, ones;
-                prepareEncoding(w,h, out zeroNoSize, out zeroBlocks, out ones);
-                retVal = 2 + zeroNoSize; // 2 zeros & #
-                retVal *= zeroBlocks; // 1b 0 + #
-                ones += retVal;
-                ones += 4; // 4bits for zero #s size
-                retVal = ones / 8;
-                if((ones%8) > 0) retVal++;
-                return retVal;
-            } else {
-                if(box == null) return 0;
-                Byte[] bitArray;
-                if (reverse) bitArray = getGFXmapR(w, h); else bitArray = getGFXmap(w, h);
-                /*String bitArray2 = encode(bitArray);
-                String bitArray3 = decode(bitArray2);
-                int size = bitArray3.Length;
-                if ((size & 7) > 0) return (size / 8) + 1; else return (size / 8);
-                */
-                int size = bitArray.Length;
-                int c=0;
-                for(int i=0;i<size;i++) {
-                    if((i > 0) && ((i & 7) == 0)) {
-                        retVal++;
-                        c=0;
-                    }
-                    if(bitArray[i] > 0) {
-                        retVal++;
-                    }
-                    c++;
-                }
-                if((size & 7) > 0) retVal++;
-                return retVal;
-            }
-            throw new NotImplementedException();
-        }
-
-        public int getGFXbitSize() {
-            int retVal = 0;
-            if(box == null) return 0;
-            byte[] GFXdata = getGFXmap();
-            int count = 0;
-            if(GFXdata == null) return 0;
-            foreach(byte i in GFXdata) {
-                if(count > 7) {
-                    retVal++;
-                    count = 0;
-                }
-                count++;
-                if(i > 0) {
-                    retVal++;
-                }
-            }
-            if((count & 7) > 0) {
-                retVal++;
-            }
-            return retVal;
-        }
-        
         public String getGFXstream() {
             String retVal = "";
             if(box == null) return retVal;
@@ -427,37 +277,6 @@ namespace XorPack
 
             return retVal;
         }
-                
-        // public int countZeros(Byte[] bitArray)
-        // {
-        //     int count = 0;
-        //     foreach(Byte i in bitArray) if(i == 0) count++;
-        //     return count;
-        // }
-
-        // public int countHalfByte()
-        // {
-        //     int zeros = 0;
-        //     int oddLen = box.Length;
-        //     oddLen = (oddLen | 1) - 1;
-        //     for(int y=0;y<oddLen;y+=2)
-        //     {
-        //         for(int x=0;x<box[y].Row.Length*2;x++) {
-        //             int b1_2 = box[y].Row[x/2];
-        //             int b2_2 = box[y+1].Row[x/2];
-        //             if((x & 1) == 0) {
-        //                 if(((b1_2 | b2_2) & 0xF0) == 0) {
-        //                     zeros++;
-        //                 }
-        //             } else {
-        //                 if(((b1_2 | b2_2) & 0x0F) == 0) {
-        //                     zeros++;
-        //                 }
-        //             }
-        //         }
-        //     }
-        //     return zeros;
-        // }
 
         public bool setSquareMode() {
             if(m_height == 0) return false;

@@ -1,186 +1,201 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text;
+using System.Linq;
 using XorPack;
 
 namespace CSharpWithVSCode.ConsoleApp
 {
     public static class Program
     {
+        static List<List<int>> bitCounts = new List<List<int>>();
+        static List<string> allChars = new List<string>();
+        static int[] blockSizeSums = new int[254];
+        static int blockSize;
+        static int rounds = 0;
+        static Int32[] glyphs;
+
         public static void Main(string[] args)
         {
-            if(args.Length == 0)
-                args = new string[] {"FreeSerifBold24pt7b.h"};
-            
+            if (args.Length == 0)
+                args = new string[] { "Org_01.h" }; // Picopixel.h Arial24pt.h
+
             Byte[] bmp;
-            Int32[] descr;
             int chars;
-            using (FileStream fs = new FileStream(args[0], FileMode.Open, FileAccess.Read)) {
-                using (StreamReader sr = new StreamReader(fs)) {
+            string packedFont = string.Empty, glyphHead, fontDeclaration;
+            using (FileStream fs = new FileStream(args[0], FileMode.Open, FileAccess.Read))
+            {
+                using (StreamReader sr = new StreamReader(fs))
+                {
                     string file;
                     file = sr.ReadToEnd();
                     int startPos, endPos;
                     startPos = file.IndexOf("{");
                     endPos = file.IndexOf("}", startPos);
                     string bytes = file.Substring(startPos + 1, endPos - startPos - 1);
-                    file = file.Substring(endPos+1);
+                    int lf = file.LastIndexOf(Environment.NewLine, startPos) + 1;
+                    packedFont = file.Substring(lf, startPos - lf + 1) + Environment.NewLine;
+                    file = file.Substring(endPos + 1);
                     bmp = readHexs(bytes);
                     startPos = file.IndexOf("{");
+                    lf = file.LastIndexOf(Environment.NewLine, startPos);
+                    glyphHead = file.Substring(lf, startPos - lf + 1);
                     bytes = file.Substring(startPos + 1);
-                    descr = readInts(bytes);
-                    chars = descr.Length / 6;
+                    endPos = file.LastIndexOf("};") + 2;
+                    startPos = file.LastIndexOf("};", endPos - 2);
+                    startPos = file.IndexOf(Environment.NewLine, startPos);
+                    fontDeclaration = file.Substring(startPos, endPos - startPos);
+                    glyphs = readInts(bytes);
+                    chars = glyphs.Length / 6;
                     sr.Close();
                 }
                 fs.Close();
             }
-            string charData, font = "";
-            int bitSize, fontBitSize = 0, fixedSize = 0, dynamicSize = 0, GFXsize = 0, blockSize = 0;
-            int maxW = 0, maxH = 0, mixedDifference = 0;
-            for(int i=0;i<chars-1;i++) {
-                if(descr[(i * 6) + 1] > maxW) maxW = descr[(i * 6) + 1];
-                if(descr[(i * 6) + 2] > maxH) maxH = descr[(i * 6) + 2];
-            }
-            //int zeros = 0, zerosHalf = 0;
-            int shortest = 20, longest = 0;
-            for(int i=0;i<chars-1;i++) {
-                CharBox b = new CharBox(bmp, descr, i);
-                string[] dataRows = GFX2ASCII(bmp, descr, i);
-                if(dataRows == null) bitSize = 0; else bitSize = string.Join("", dataRows).Length;
-                if((bitSize & 7) > 0) bitSize += 8-(bitSize & 7);
-                fontBitSize += bitSize;
-                //bitSize = b.getFixedBitSize(maxW, maxH);
-                //bitSize = b.getGFXbitSize();
-                b.Xor();
-                // if(b.box != null) {
-                //     zeros += b.countZeros(b.getGFXmap()); // 4111
-                //     zerosHalf += b.countHalfByte(); // 5171
-                // }
-                string[] dataRowsX = b.getASCII();
-                if(b.box != null) {
-                    String sizes = "";
-                    int min = int.MaxValue, minpos = 99;
-                    for(int j=1;j<descr[(i * 6) + 1]*descr[(i * 6) + 2];j++) {
-                        int len = b.encode(j).Length;
-                        sizes += j +"-"+len+"/";
-                        if((len%8) > 0) len = 1+(len/8); else len /= 8;
-                        if(min > len) {
-                            min = len;
-                            minpos = j;
-                        }
-                        sizes += len + " ";
-                    }
-                    if(shortest > minpos) 
-                        shortest = minpos;
-                    if(longest < minpos)
-                        longest = minpos;
-                    blockSize += min;
-                    bitSize = b.getFixedBitSize(-1, -1, false);
-                    int commonSize = bitSize;
-                    font += b.box[0].Width + "x" + b.box.Length + " byte width size:" + bitSize;
-                    dynamicSize += bitSize;
-                    bitSize = b.getFixedBitSize(maxW, maxH, false);
-                    /*b.UnXor();
-                    CharBox bR = new CharBox(b);
-                    b.Xor();
-                    bR.Xor();
-                    bitSize = bR.getFixedBitSize(-1,-1);*/
-                    font += " block size (" + minpos + "):" + min;
-                    font += " arithmetic size:" + bitSize;
-                    fixedSize += bitSize;
-                    bitSize = b.getGFXbitSize();
-                    font += " GFX size:" + bitSize;
-                    GFXsize += bitSize;
-                    if(bitSize - commonSize > 0)
-                        mixedDifference += bitSize - commonSize;
-                // if(b.setSquareMode()) {
-                //     int bitSizeSq = b.getGFXbitSize();
-                //     if(bitSizeSq < bitSize) {
-                //         bitSize = bitSizeSq;
-                //         font += " GFX square size:" + bitSize;
-                //         descr[i*6] = 0; // reset char pos
-                //         CharBox bSquare = new CharBox(b.getGFXmap(), descr, i);
-                //         string[] dataRowsXsq = bSquare.getASCII();
-                //         for(int y=0;y<dataRowsX.Length;y++) dataRowsX[y] += "||" + dataRowsXsq[y];
-                //     }
-                // }
-                    charData = "";
-                    if(dataRows != null) for(int idx=0;idx<dataRows.Length-1;idx++) {
-                        charData += dataRows[idx] + "|" + dataRowsX[idx] + Environment.NewLine;
-                    }
-                    charData += sizes + Environment.NewLine;
-                    charData += b.decodeStringStream(b.getPackedStream(b.box[0].Width, b.box.Length, false));
-                    //GFXsquareSize += bitSize;
-                    font += Environment.NewLine + charData + Environment.NewLine;
+            for (int i = 0; i < chars; i++)
+            {
+                CharBox box = new CharBox(bmp, glyphs, i);
+                box.Xor();
+                string asciiMap = box.getGFXstream(); // full BMP
+                allChars.Add(asciiMap); // original
+                if (box.box != null) {
+                    TrimEndZeros(ref asciiMap);
                 }
+                int round = asciiMap.Length & 7;
+                if (round != 0)
+                    rounds += (8 - round);
+                CountBitsAndStats(asciiMap);
             }
-            //CharBox.maxZeros;
-            font += "Chars: " + chars + " bits: " + fontBitSize + Environment.NewLine +
-            "Max X * Y: " + maxW + "x" + maxH + " bits " + maxW * maxH * chars + " " + Perc(fontBitSize, maxW * maxH * chars) + "% of fixed" + Environment.NewLine +
-            "Byte width xored data size:" + dynamicSize + " fixed(" + maxW + "," + maxH + "):" + fixedSize + " GFX size: " + GFXsize +
-            //" GFX square size: " + GFXsquareSize + 
-            " of " + bmp.Length + " => "
-            + Perc(dynamicSize, bmp.Length) + "% " + Perc(fixedSize, bmp.Length) + "% " + Perc(GFXsize, bmp.Length) + "% "
-            + Perc(blockSize, bmp.Length) + "% (" + shortest + "-" + longest + " " + blockSize + ")"
-            ;
-            using(FileStream fs = new FileStream(args[0].Substring(0,args[0].Length-4)+".txt", FileMode.Create, FileAccess.Write)) {
-                using(StreamWriter sw = new StreamWriter(fs)) {
-                    sw.Write(font);
+            // Arial10pt 3: 7640 => 955B <- 1432 => 66,689%
+            // Arial24pt 5: 27956 => 3495B (+4b) <- 7598 => 45,999%
+            // Pico 3: 1321  => 166B (+1b) <- 179 => 92,737%
+            packedFont += EncodeFont();
+            packedFont += blockSize + "};" + glyphHead + Environment.NewLine;
+            for (int i = 0; i < chars; i++)
+            {
+                packedFont += "{" + glyphs[i * 6] + "," + glyphs[i * 6 + 1] + "," + glyphs[i * 6 + 2] + "," + glyphs[i * 6 + 3] + "," + glyphs[i * 6 + 4] + "," + glyphs[i * 6 + 5] + "}," + Environment.NewLine;
+            }
+            packedFont += "};" + fontDeclaration + Environment.NewLine;
+            using (FileStream fs = new FileStream(args[0].Substring(0, args[0].Length - 4) + ".txt", FileMode.Create, FileAccess.Write))
+            {
+                using (StreamWriter sw = new StreamWriter(fs))
+                {
+                    sw.Write(packedFont);
                 }
                 fs.Close();
             }
         }
 
-        public static double Perc(long x, long y) {
-            return ((long)100000 * x / y + 5) / 10 / 100.0;
-        }
-/*        typedef struct { // Data stored PER GLYPH
-            uint16_t bitmapOffset;     // Pointer into GFXfont->bitmap
-            uint8_t  width, height;    // Bitmap dimensions in pixels
-            uint8_t  xAdvance;         // Distance to advance cursor (x axis)
-            int8_t   xOffset, yOffset; // Dist from cursor pos to UL corner
-        } GFXglyph;
-
-        typedef struct { // Data stored for FONT AS A WHOLE:
-            uint8_t  *bitmap;      // Glyph bitmaps, concatenated
-            GFXglyph *glyph;       // Glyph array
-            uint8_t   first, last; // ASCII extents
-            uint8_t   yAdvance;    // Newline distance (y axis)
-        } GFXfont;*/
-
-        public static string[] GFX2ASCII(Byte[] data, Int32[] descr, int idx)
+        private static string EncodeFont()
         {
-            string raw = "";
-            int bmpIdx = descr[(idx * 6)],
-                width = descr[(idx * 6) + 1],
-                height = descr[(idx * 6) + 2];
-            Byte mask = 128;
-            for(int y=0;y<height;y++) {
-                for(int x=0;x<width;x++) {
-                    if((data[bmpIdx] & mask) != 0) {
-                        raw += '*';
-                    } else {
-                        raw += ' ';
-                    }
-                    if(mask > 1) {
-                        mask >>= 1;
-                    } else {
-                        mask = 128;
-                        bmpIdx++;
-                    }
-                }
-                raw += '\n';
+            StringBuilder font = new StringBuilder();
+            blockSize = Array.IndexOf(blockSizeSums, blockSizeSums.Min()) + 2;
+            int bitPos = 0, byteSize = 0;
+            string bmp = string.Empty;
+            for (int i = 0; i < allChars.Count; i++)
+            {
+                string bits = EncodeChar(i);
+                bitPos += bits.Length;
+                glyphs[i * 6] = bitPos;
+                string bitsCopy = bits;
+                bmp += bits;
+                byteSize += BinaryStringToHexString(ref bits);
+                // font.Append(bits);
+                font.Append(" /* ");
+                font.Append(bitsCopy);
+                font.Append(" */");
+                font.Append(Environment.NewLine);
             }
-            if(raw.Length == 0) return null;
-            return raw.Split('\n');
+            byteSize = BinaryStringToHexString(ref bmp);
+            font.Append(bmp);
+            int averagePos = ++byteSize / (glyphs.Length / 6);
+            for (int i = 0; i < allChars.Count; i++)
+            {
+                glyphs[i * 6] -= averagePos * i;
+            }
+            if (glyphs[0] == 0)
+                glyphs[0] = Int16.MinValue;
+            return font.ToString();
         }
-        private static Byte[] readHexs(string hexs)
+
+        private static string EncodeChar(int index)
+        {
+            int pos = 0;
+            int allBits = bitCounts[index].Count;
+            if (allChars[index].Length == 0)
+                return allChars[index];
+            allBits--;
+            string encodedData = string.Empty;
+            while (pos <= allBits)
+            {
+                int nextPos = Math.Min(pos + blockSize, allBits);
+                if (bitCounts[index][nextPos] - bitCounts[index][pos] > 0)
+                {
+                    nextPos = Math.Min(pos + blockSize, allChars[index].Length) - pos;
+                    encodedData += '1' + allChars[index].Substring(pos, nextPos);
+                } else {
+                    encodedData += '0';
+                }
+                pos += blockSize;
+            }
+            return encodedData;
+        }
+
+        public static void CountBitsAndStats(string asciiMap)
+        {
+            List<int> charList = new List<int>(asciiMap.Length + 1);
+            bitCounts.Add(charList);
+            charList.Add(0); // afterBlock - startOfBlock = onesCount
+            int sum = 0;
+
+            foreach (var bit in asciiMap)
+            {
+                sum += bit - '0';
+                charList.Add(sum);
+            }
+            UpdateBlockStats(charList, asciiMap);
+        }
+
+        private static void UpdateBlockStats(List<int> charList, string asciiMap)
+        {
+            for (int blockWidth = 2; blockWidth < blockSizeSums.Length + 2; blockWidth++)
+            {
+                int pos = 0;
+                while(pos < asciiMap.Length)
+                {
+                    int nextBlock = Math.Min(pos + blockWidth, charList.Count - 1);
+                    if (charList[nextBlock] - charList[pos] > 0) blockSizeSums[blockWidth - 2] += blockWidth;
+                    blockSizeSums[blockWidth - 2]++; // zero or 1b prefix
+                    pos += blockWidth;
+                }
+            }
+        }
+
+        public static bool TrimEndZeros(ref string asciiMap)
+        {
+            int lastZero = asciiMap.Length;
+            if (lastZero > 0)
+            {
+                int lastZeroStart = lastZero;
+                while (lastZero > 0 && asciiMap[--lastZero] == '0') ;
+                if (lastZeroStart != ++lastZero)
+                    asciiMap = asciiMap.Substring(0, lastZero);
+                return lastZero != lastZeroStart;
+            }
+
+            throw new Exception("Bug of logic !");
+        }
+
+    private static Byte[] readHexs(string hexs)
         {
             Byte[] result = new Byte[hexs.Length / 5];
             int startPos = 0, endPos = 0, idx = 0;
-            while(endPos >= 0) {
+            while (endPos >= 0)
+            {
                 startPos = hexs.IndexOf("x", startPos) + 1;
                 endPos = hexs.IndexOf(",", startPos);
-                if(endPos < 0) break;
+                if (endPos < 0) break;
                 result[idx++] = Byte.Parse(hexs.Substring(startPos, endPos - startPos), NumberStyles.HexNumber);
             }
             Byte[] resultSmall = new Byte[idx];
@@ -192,11 +207,14 @@ namespace CSharpWithVSCode.ConsoleApp
             Int32[] result = new Int32[data.Length / 5];
             int startPos = 0, endPos = 0, bracketPos = 0, idx = 0, semiPos;
             startPos = data.IndexOf("{", startPos) + 1;
-            do {
+            do
+            {
                 bracketPos = data.IndexOf("}", startPos);
-                while(endPos >= 0 && endPos != bracketPos) {
+                while (endPos >= 0 && endPos != bracketPos)
+                {
                     endPos = data.IndexOf(",", startPos);
-                    if(endPos > 0 && bracketPos < endPos) {
+                    if (endPos > 0 && bracketPos < endPos)
+                    {
                         endPos = bracketPos;
                     }
                     //Console.WriteLine(data.Substring(startPos, endPos - startPos) + "..." + data.Substring(endPos,10));
@@ -207,12 +225,16 @@ namespace CSharpWithVSCode.ConsoleApp
                 int commentPos = data.IndexOf("//", startPos),
                     nlPos = data.IndexOf("\n", startPos);
                 semiPos = data.IndexOf(";", startPos);
-                if(commentPos > 0 && commentPos < nlPos) {
+                if (commentPos > 0 && commentPos < nlPos)
+                {
                     startPos = data.IndexOf("{", nlPos) + 1;
-                } else {
+                }
+                else
+                {
                     startPos = data.IndexOf("{", startPos) + 1;
                 }
-                if(semiPos > commentPos && semiPos < nlPos) {
+                if (semiPos > commentPos && semiPos < nlPos)
+                {
                     semiPos = startPos + 1;
                 }
             } while (startPos > 0 && startPos < semiPos);
@@ -220,5 +242,33 @@ namespace CSharpWithVSCode.ConsoleApp
             Array.Copy(result, resultSmall, idx);
             return resultSmall;
         }
+        public static int BinaryStringToHexString(ref string binary)
+        {
+            int bytes = 0;
+            if (string.IsNullOrEmpty(binary))
+                return 0;
+
+            StringBuilder result = new StringBuilder(binary.Length / 8 + 1);
+
+            // TODO: check all 1's or 0's... throw otherwise
+
+            int mod4Len = binary.Length % 8;
+            if (mod4Len != 0)
+            {
+                // pad to length multiple of 8
+                binary = binary.PadRight(((binary.Length / 8) + 1) * 8, '0');
+            }
+
+            for (int i = 0; i < binary.Length; i += 8)
+            {
+                string eightBits = binary.Substring(i, 8);
+                result.AppendFormat("0x{0:X2},", Convert.ToByte(eightBits, 2));
+                bytes++;
+            }
+
+            binary = result.ToString();
+            return bytes;
+        }
+
     }
 }
