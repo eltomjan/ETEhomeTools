@@ -1009,16 +1009,15 @@ void Adafruit_GFX::drawRGBBitmap(int16_t x, int16_t y,
     endWrite();
 }
 
-//#include <string>
 class BitStreamsReader {
 public:
-//	std::string chr;
-	BitStreamsReader(uint8_t *arr, unsigned int maxSize) {
+	BitStreamsReader(uint8_t *arr, uint8_t startOffset, uint8_t maxSize, uint16_t bSize) {
 		blockSize = maxSize;
-		bitMask = 0x80;
+		bitMask = 0x80 >> startOffset;
 		bytePtr = arr;
 		zerosCount = 0;
 		remainingBits = 0;
+		bitSize = bSize;
 		markBitInit();
 	}
 	operator bool() {
@@ -1028,36 +1027,34 @@ public:
 			return retVal;
 		} else if(remainingBits) {
 			bool retVal = !!(pgm_read_byte(bytePtr) & bitMask);
-//			chr += retVal?'1':'0';
 			next();
 			if(!--remainingBits) {
 				markBitInit();
 			}
 			return retVal;
 		} else if(zerosCount) {
-//			chr += '0';
 			if(!--zerosCount) {
 				markBitInit();
 			}
 			return 0;
-		}
+		} else if (!remainingBits) 
+			return false;
 		throw "??";
 		return 0; //throw "??";
 	}
 private:
 	void markBitInit() {
-		if(blockSize) {
+		if(bitSize && blockSize) {
 			if(pgm_read_byte(bytePtr) & bitMask) {
 				remainingBits = blockSize;
-	//			chr += remainingBits + '0';
 			} else {
 				zerosCount = blockSize;
-	//			chr += m_zeros + '0';
 			}
 			next();
 		}
 	}
 	void next () {
+		if(bitSize) bitSize--;
 		if(bitMask == 0x01) {
 			bitMask = 0x80;
 			bytePtr++;
@@ -1066,6 +1063,7 @@ private:
 		}
 	};
 	uint8_t *bytePtr, bitMask, zerosCount, remainingBits, blockSize;
+	uint16_t bitSize;
 };
 
 class BitXorBuffer {
@@ -1084,12 +1082,6 @@ public:
 		bytePtr = bitBuf;
 	}
 	bool xorMove(bool by) {
-/* Original logic
-		chk = chk ^ !!(bitMask & *bytePtr);
-		*bytePtr |= bitMask; // set bit
-		if(!by) {
-				*bytePtr ^= bitMask; // reset bit (set, xor)
-		}*/
 		if(bitMask & *bytePtr) by ^= true;
 		*bytePtr |= bitMask;
 		if(!by) {
@@ -1167,23 +1159,20 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
         // drawChar() directly with 'bad' characters of font may cause mayhem!
 
         c -= (uint8_t)pgm_read_byte(&gfxFont->first);
-        GFXglyph *glyph  = (GFXglyph *)pgm_read_pointer(&gfxFont->glyph);
-        uint16_t bo = pgm_read_word(&glyph->bitmapOffset);
+		uint8_t blockSize = gfxFont->bitmap[0];
+		uint16_t averageCharSize = bitmapSize / (gfxFont->last - gfxFont->first + 1);
+		GFXglyph *glyph  = (GFXglyph *)pgm_read_pointer(&gfxFont->glyph);
+		glyph += c;
+		uint16_t bitSize = (int16_t)pgm_read_word(&(glyph)->bitmapOffset) + averageCharSize * c;
+		uint16_t bo;
+		if (c) {
+			bo = (int16_t)pgm_read_word(&(glyph - 1)->bitmapOffset);
+			if (bo == _I16_MIN) bo = 0; // packed marker
+			else bo += averageCharSize * (c - 1);
+			bitSize -= bo;
+		} else bo = 0;
 		uint16_t unpackedSize = glyph->height * glyph->width;
 		bool packed = (bo != unpackedSize); // if size is smaller means char is packed
-		bo = 0;
-		for(uint8_t i=0;i<c;i++) {
-			if(packed) { // packed less bits to skip
-				bo += (pgm_read_word(&glyph->bitmapOffset) >> 3);
-				if(pgm_read_word(&glyph->bitmapOffset) & 7) bo++;
-			} else {
-				bo += (unpackedSize >> 3);
-				if(unpackedSize & 7) bo++;
-			}
-			glyph++; // move to current glyph
-			unpackedSize = glyph->height * glyph->width;
-			packed = (pgm_read_word(&glyph->bitmapOffset) != unpackedSize);
-		}
         uint8_t  *bitmap = (uint8_t *)pgm_read_pointer(&gfxFont->bitmap);
 
         uint8_t  w  = pgm_read_byte(&glyph->width),
@@ -1217,19 +1206,17 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
         // implemented this yet.
 
         startWrite();
-		uint8_t blockSize = 0;
-		if(packed) blockSize = pgm_read_byte(&bitmap[bo++]); // for first char pick 1st bit array only
-		BitStreamsReader bitStream(&bitmap[bo++], packed?blockSize:0); // ptr, blockSize(if packed)
+		uint8_t startOffset = bo & 7;
+		bo >>= 3;
+		BitStreamsReader bitStream(&bitmap[bo] + 1, startOffset, packed?blockSize:0, bitSize); // ptr, blockSize(if packed)
 		BitXorBuffer rowXorBuf(w); // row XOR buffer (each row is XORed with)
-//		std::string chr = "";
 		bool chk;
         for(yy=0; yy<h; yy++) {
 			rowXorBuf.rewind();
             for(xx=0; xx<w; xx++) {
 				chk = bitStream; // read 1b
-//				chr += chk?'*':' ';
 				if(packed) chk = rowXorBuf.xorMove(chk); // xor with XOR buffer
-                if(chk) {
+				if(chk) {
                     if(size == 1) {
                         writePixel(x+xo+xx, y+yo+yy, color);
                     } else {
@@ -1238,9 +1225,8 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
                     }
 				}
             }
-//			chr += '|';
 		}
-        endWrite();
+		endWrite();
 
     } // End classic vs custom font
 }
@@ -1425,7 +1411,7 @@ void Adafruit_GFX::cp437(boolean x) {
     @param  f  The GFXfont object, if NULL use built in 6x8 font
 */
 /**************************************************************************/
-void Adafruit_GFX::setFont(const GFXfont *f) {
+void Adafruit_GFX::setFont(const GFXfont *f, uint32_t size) {
     if(f) {            // Font struct pointer passed in?
         if(!gfxFont) { // And no current font struct?
             // Switching from classic to new font behavior.
@@ -1438,6 +1424,7 @@ void Adafruit_GFX::setFont(const GFXfont *f) {
         cursor_y -= 6;
     }
     gfxFont = (GFXfont *)f;
+	bitmapSize = size;
 }
 
 

@@ -38,10 +38,10 @@ namespace XorPack
         public CharBox(byte[] data, Int32[] descr, int pos)
         {
             m_step = 1;
-            int width = descr[(pos * 6) + 1];
-            m_height = descr[(pos * 6) + 2];
+            int width = descr[1];
+            m_height = descr[2];
             if(m_height + width == 0) return;
-            pos = descr[(pos * 6) + 0];
+            pos = descr[0];
             int startPos = pos;
             box = new CharRow[m_height];
             Byte mask = 128;

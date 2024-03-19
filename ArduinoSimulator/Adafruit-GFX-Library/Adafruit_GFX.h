@@ -102,7 +102,7 @@ class Adafruit_GFX : public Print {
     setTextSize(uint8_t s),
     setTextWrap(boolean w),
     cp437(boolean x=true),
-    setFont(const GFXfont *f = NULL),
+    setFont(const GFXfont *f, uint32_t size),
     getTextBounds(const char *string, int16_t x, int16_t y,
       int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h),
     getTextBounds(const __FlashStringHelper *s, int16_t x, int16_t y,
@@ -149,6 +149,7 @@ class Adafruit_GFX : public Print {
     _cp437;         ///< If set, use correct CP437 charset (default is off)
   GFXfont
     *gfxFont;       ///< Pointer to special font
+  uint32_t bitmapSize;
 };
 
 

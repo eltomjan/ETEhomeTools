@@ -1,4 +1,4 @@
-#include "Display.h" 
+﻿#include "Display.h" 
 #include "Font_big.h"
 #include "Font_symbol.h"
 #include "Font_medium.h"
@@ -72,25 +72,14 @@ void showScreen(char round) {
 	tft.fillScreen(BG_COLOR);
 	tft.setTextColor(green,BG_COLOR);
 	tft.setTextSize(1);
-#include "Arial10pt.h"
-	tft.setFont(&Arial10pt7b);
-#include "Arial24pt.h"
-	tft.setFont(&Arial24pt7b);
-	tft.println("");
-	tft.println("!Ubuntu font,.'");
-	tft.println("Arduino Simula-\ntor demo");
-	tft.setTextColor(yellow,BG_COLOR);
-	// Symbol return
-	showImage(ILI9340_TFTHEIGHT-60, 75, (uint8_t*)Font_symbol, 24, 25, yellow, 2);
-	// Left arrow
-	showImage(ILI9340_TFTHEIGHT-60, 120, (uint8_t*)Font_symbol, 24, 25, yellow, 1);
-	// Right arrow
-	showImage(ILI9340_TFTHEIGHT-60, 145, (uint8_t*)Font_symbol, 24, 25, yellow, 0);
-	showDigit(0,120,9,true);
-	showDigit(51,120,1,true);
-	showDigit(102,120,2,true);
-	showDigit(153,120,4,true);
-	showDigit(204,120,8,true);
+#include "Arial10ptP.h"
+	tft.setFont(&Arial10pt7b, sizeof(Arial10pt7bBitmaps));
+	for (uint16_t i = ' '; i < 128; i++)
+	{
+		tft.print((char*)&i);
+		if ((i-' ') % 20 == 0) tft.println();
+	}
+	return;
 }
 
 void clearSpace(int16_t x, int16_t y, int16_t w, int16_t h) {
