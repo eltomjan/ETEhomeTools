@@ -4,7 +4,7 @@
 class BitStreamsReader {
 public:
 	BitStreamsReader(uint8_t *arr, uint8_t startOffset, uint8_t maxSize, uint16_t bSize);
-	operator bool();
+	bool GetBit();
 
 private:
 	void markBitInit();

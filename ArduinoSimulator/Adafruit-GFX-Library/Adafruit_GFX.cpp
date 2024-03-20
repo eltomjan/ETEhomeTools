@@ -1,4 +1,4 @@
-#include "../XorUnpack.h"
+﻿#include "../XorUnpack.h"
 /*
 This is the core graphics library for all our displays, providing a common
 set of graphics primitives (points, lines, circles, etc.).  It needs to be
@@ -108,6 +108,9 @@ inline uint8_t *pgm_read_bitmap_ptr(const GFXfont *gfxFont) {
    @param    h   Display height, in pixels
 */
 /**************************************************************************/
+// ****************************************** ↙
+static bool packed = false;
+// ****************************************** ↖
 Adafruit_GFX::Adafruit_GFX(int16_t w, int16_t h) : WIDTH(w), HEIGHT(h) {
   _width = WIDTH;
   _height = HEIGHT;
@@ -118,6 +121,9 @@ Adafruit_GFX::Adafruit_GFX(int16_t w, int16_t h) : WIDTH(w), HEIGHT(h) {
   wrap = true;
   _cp437 = false;
   gfxFont = NULL;
+// ****************************************** ↙
+  packed = false;
+// ****************************************** ↖
 }
 
 /**************************************************************************/
@@ -1180,23 +1186,24 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
     // drawChar() directly with 'bad' characters of font may cause mayhem!
 
     c -= (uint8_t)pgm_read_byte(&gfxFont->first);
-	// ******************************************
-	uint8_t blockSize = gfxFont->bitmap[0];
-	uint16_t averageCharSize = (8 * bitmapSize) / (gfxFont->last - gfxFont->first + 1);
-	GFXglyph *glyph = pgm_read_glyph_ptr(gfxFont, 0); 
-	bool packed = (glyph->bitmapOffset); // if size is smaller means char is packed
-	glyph = pgm_read_glyph_ptr(gfxFont, c);
-	uint32_t bitSize = pgm_read_word(&(glyph)->bitmapOffset) + averageCharSize * c;
-	uint32_t bo;
-	if (c) {
-		GFXglyph *prevGlyph = pgm_read_glyph_ptr(gfxFont, c - 1);
-		bo = pgm_read_word(&prevGlyph->bitmapOffset);
-		if (bo == _I16_MIN) bo = 0; // packed marker
-		else bo = bo + averageCharSize * (c - 1);
-		bitSize -= bo;
-	}
-	else bo = 0;
-	// ******************************************
+// ****************************************** ↙
+    uint8_t blockSize = gfxFont->bitmap[0];
+    uint16_t averageCharSize = (8 * bitmapSize) / (gfxFont->last - gfxFont->first + 1);
+    GFXglyph *glyph = pgm_read_glyph_ptr(gfxFont, c); 
+    uint32_t bitSize = pgm_read_word(&glyph->bitmapOffset);
+    uint32_t bo;
+    if (packed) {
+        if (c) {
+            bitSize += averageCharSize * c;
+            GFXglyph *prevGlyph = pgm_read_glyph_ptr(gfxFont, c - 1);
+            bo = pgm_read_word(&prevGlyph->bitmapOffset);
+            if (bo == _I16_MIN) bo = 0; // packed marker
+            else bo = bo + averageCharSize * (c - 1);
+            bitSize -= bo;
+        }
+        else bo = 0;
+    } else bo = bitSize;
+// ****************************************** ↖
     uint8_t *bitmap = pgm_read_bitmap_ptr(gfxFont);
 
     uint8_t w = pgm_read_byte(&glyph->width), h = pgm_read_byte(&glyph->height);
@@ -1229,26 +1236,28 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
     // implemented this yet.
 
     startWrite();
-	// ******************************************
-	uint8_t startOffset = bo & 7;
-	bo >>= 3;
-	BitStreamsReader bitStream(&bitmap[bo] + 1, startOffset, packed ? blockSize : 0, bitSize); // ptr, blockSize(if packed)
-	BitXorBuffer rowXorBuf(w); // row XOR buffer (each row is XORed with)
-	// ******************************************
-	for (yy = 0; yy < h; yy++) {
-	// ******************************************
-      rowXorBuf.rewind();
-	// ******************************************
+// ****************************************** ↙
+    uint8_t startOffset = bo & 7;
+    if (packed) bo >>= 3;
+    BitStreamsReader bitStream(&bitmap[bo] + 1, startOffset, packed ? blockSize : 0, bitSize); // ptr, blockSize(if packed)
+    BitXorBuffer rowXorBuf(w); // row XOR buffer (each row is XORed with)
+// ****************************************** ↖
+    for (yy = 0; yy < h; yy++) {
+// ****************************************** ↙
+      if (packed) rowXorBuf.rewind();
+// ****************************************** ↖
       for (xx = 0; xx < w; xx++) {
-        //if (!(bit++ & 7)) {
-        //  bits = pgm_read_byte(&bitmap[bo++]);
-        //}
-        //if (bits & 0x80) {
-	// ******************************************
-		bool chk = bitStream; // read 1b
-		if(packed) chk = rowXorBuf.xorMove(chk); // xor with XOR buffer
-		if (chk) {
-	// ******************************************
+// ****************************************** ↙
+        if (packed) {
+            bool bit = bitStream.GetBit();
+            bit = rowXorBuf.xorMove(bit); // xor with XOR buffer
+            bits = -bit;
+        }
+// ****************************************** ↖
+        else if (!(bit++ & 7)) {
+          bits = pgm_read_byte(&bitmap[bo++]);
+        }
+        if (bits & 0x80) {
           if (size_x == 1 && size_y == 1) {
             writePixel(x + xo + xx, y + yo + yy, color);
           } else {
@@ -1256,7 +1265,7 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
                           size_x, size_y, color);
           }
         }
-        //bits <<= 1;
+        bits <<= 1;
       }
     }
     endWrite();
@@ -1378,6 +1387,10 @@ void Adafruit_GFX::setFont(const GFXfont *f, uint32_t size) {
     cursor_y -= 6;
   }
   gfxFont = (GFXfont *)f;
+// ****************************************** ↙
+  GFXglyph *glyph = pgm_read_glyph_ptr(f, 0);
+  packed = (glyph->bitmapOffset); // 1st starts @0 unless packed where there is start of 2nd
+// ****************************************** ↖
   bitmapSize = size;
 }
 
@@ -2548,7 +2561,11 @@ void GFXcanvas16::byteSwap(void) {
   if (buffer) {
     uint32_t i, pixels = WIDTH * HEIGHT;
     for (i = 0; i < pixels; i++)
-;//      buffer[i] = __builtin_bswap16(buffer[i]);
+#ifdef WIN32
+      throw "Not implemented !";
+#else
+      buffer[i] = __builtin_bswap16(buffer[i]);
+#endif
   }
 }
 

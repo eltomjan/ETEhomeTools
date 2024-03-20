@@ -1,7 +1,10 @@
 #ifndef _ADAFRUIT_GFX_H
 #define _ADAFRUIT_GFX_H
 
+#ifdef WIN32
 #define ARDUINO 100
+#include <stdint.h>
+#endif
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -9,11 +12,12 @@
 #else
 #include "WProgram.h"
 #endif
-#include <stdint.h>
 #include "gfxfont.h"
 
-//#include <Adafruit_I2CDevice.h>
-//#include <Adafruit_SPIDevice.h>
+#ifndef WIN32
+#include <Adafruit_I2CDevice.h>
+#include <Adafruit_SPIDevice.h>
+#endif
 
 /// A generic graphics superclass that can handle all sorts of drawing. At a
 /// minimum you can subclass and provide drawPixel(). At a maximum you can do a

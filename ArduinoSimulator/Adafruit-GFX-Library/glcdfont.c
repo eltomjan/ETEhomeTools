@@ -14,7 +14,10 @@
 #undef PROGMEM
 #define PROGMEM
 #else
+#ifdef WIN32
+
 #undef PROGMEM
+#endif
 #define PROGMEM
 #endif
 

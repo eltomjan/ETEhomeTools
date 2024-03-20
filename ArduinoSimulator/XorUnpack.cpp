@@ -11,7 +11,7 @@ BitStreamsReader::BitStreamsReader(uint8_t *arr, uint8_t startOffset, uint8_t ma
 	markBitInit();
 }
 
-BitStreamsReader::operator bool() {
+bool BitStreamsReader::GetBit() {
 	if (!blockSize) { // unpacked stream
 		bool retVal = !!(pgm_read_byte(bytePtr) & bitMask);
 		next();
@@ -29,10 +29,11 @@ BitStreamsReader::operator bool() {
 		if (!--zerosCount) {
 			markBitInit();
 		}
-		return 0;
+		return false;
 	}
 	else if (!remainingBits)
 		return false;
+
 	throw "??";
 	return 0; //throw "??";
 }
