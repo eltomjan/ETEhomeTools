@@ -1160,7 +1160,7 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
 
         c -= (uint8_t)pgm_read_byte(&gfxFont->first);
 		uint8_t blockSize = gfxFont->bitmap[0];
-		uint16_t averageCharSize = bitmapSize / (gfxFont->last - gfxFont->first + 1);
+		uint16_t averageCharSize = (8 * bitmapSize) / (gfxFont->last - gfxFont->first + 1);
 		GFXglyph *glyph  = (GFXglyph *)pgm_read_pointer(&gfxFont->glyph);
 		glyph += c;
 		uint16_t bitSize = (int16_t)pgm_read_word(&(glyph)->bitmapOffset) + averageCharSize * c;

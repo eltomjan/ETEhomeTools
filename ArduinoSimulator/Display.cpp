@@ -1,7 +1,4 @@
 ﻿#include "Display.h" 
-#include "Font_big.h"
-#include "Font_symbol.h"
-#include "Font_medium.h"
 
 #define _cs 2 //9
 #define _dc 1 //8
