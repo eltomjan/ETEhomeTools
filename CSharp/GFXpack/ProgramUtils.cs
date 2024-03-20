@@ -35,7 +35,7 @@ namespace XorPack
             }
             byteSize = BinaryStringToHexString(ref bitBmp);
             font.Append(bitBmp);
-            int averagePos = ++byteSize / (glyphs.Count);
+            int averagePos = (8 * ++byteSize) / (glyphs.Count);
             for (int i = 0; i < allChars.Count; i++)
             {
                 glyphs[i][0] -= averagePos * i;
