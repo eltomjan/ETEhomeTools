@@ -1390,8 +1390,8 @@ void Adafruit_GFX::setFont(const GFXfont *f, uint32_t size) {
 // ****************************************** ↙
   GFXglyph *glyph = pgm_read_glyph_ptr(f, 0);
   packed = (glyph->bitmapOffset); // 1st starts @0 unless packed where there is start of 2nd
-// ****************************************** ↖
   bitmapSize = size;
+// ****************************************** ↖
 }
 
 /**************************************************************************/

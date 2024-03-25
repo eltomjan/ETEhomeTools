@@ -126,6 +126,7 @@ public:
                      int16_t *y1, uint16_t *w, uint16_t *h);
   void setTextSize(uint8_t s);
   void setTextSize(uint8_t sx, uint8_t sy);
+#define SetFont(a,b) a.setFont(&b, sizeof(b##Bitmaps))
   void setFont(const GFXfont *f = NULL, uint32_t size = 0);
 
   /**********************************************************************/

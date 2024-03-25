@@ -70,12 +70,14 @@ void showScreen(char round) {
 	tft.setTextColor(green,BG_COLOR);
 	tft.setTextSize(1);
 #include "Arial24ptP.h"
-	tft.setFont(&Arial24pt7b, sizeof(Arial24pt7bBitmaps));
+	SetFont(tft, Arial24pt7b);
 	tft.setCursor(0, Arial24pt7b.yAdvance);
 #include "Arial10ptP.h"
-	tft.setFont(&Arial10pt7b, sizeof(Arial10pt7bBitmaps));
+	SetFont(tft, Arial10pt7b);
 #include "Picopixel.h"
-	tft.setFont(&Picopixel, sizeof(PicopixelBitmaps));
+	SetFont(tft, Picopixel);
+#include "RobotoMono_Thin7pt7b.h"
+	SetFont(tft, RobotoMono_Thin7pt7b);
 	for (uint16_t i = ' '; i < 128; i++)
 	{
 		tft.print((char*)&i);
