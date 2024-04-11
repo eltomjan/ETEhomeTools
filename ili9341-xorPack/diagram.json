@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "author": "Uri Shaked",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 335.4, "left": -11.69, "attrs": {} },
+    { "type": "wokwi-ili9341", "id": "lcd1", "top": 5.51, "left": 40.77, "attrs": {} }
+  ],
+  "connections": [
+    [ "lcd1:GND", "uno:GND.1", "black", [ "v22", "h-46" ] ],
+    [ "lcd1:VCC", "uno:5V", "red", [ "v12", "h-103", "v251", "h104" ] ],
+    [ "lcd1:SCK", "uno:13", "green", [ "v16", "h-75" ] ],
+    [ "lcd1:MISO", "uno:12", "limegreen", [ "v20", "h-78" ] ],
+    [ "lcd1:MOSI", "uno:11", "green", [ "v24", "h-75" ] ],
+    [ "lcd1:CS", "uno:10", "orange", [ "v32", "h-64" ] ],
+    [ "lcd1:D/C", "uno:9", "purple", [ "v36", "h-84" ] ]
+  ]
+}

@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = 'bin/ili9341-xorPack.ino.hex'
+elf = 'bin/ili9341-xorPack.ino.elf'
