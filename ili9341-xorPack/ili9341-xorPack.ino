@@ -16,10 +16,11 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 void setup() {
   tft.begin();
 
-  tft.setFont(&FreeSerifBoldItalic9pt7b);
+  SetFont(tft, FreeSerifBoldItalic9pt7b);
   tft.setTextColor(ILI9341_RED);
-  tft.setTextSize(2);
-  for(int i=0;i<='u';i++) tft.write(i);
+  tft.setTextSize(1);
+  tft.setCursor(0, 30);
+  for (int i = '!'; i <= FreeSerifBoldItalic9pt7b.last; i++) tft.write(i);
 
   // Meme reference: https://english.stackexchange.com/questions/20356/origin-of-i-can-haz
 }

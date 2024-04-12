@@ -9,7 +9,7 @@
 
 /// Font data stored PER GLYPH
 typedef struct {
-  uint16_t bitmapOffset; ///< Pointer into GFXfont->bitmap
+  int16_t bitmapOffset; ///< Pointer into GFXfont->bitmap
   uint8_t width;         ///< Bitmap dimensions in pixels
   uint8_t height;        ///< Bitmap dimensions in pixels
   uint8_t xAdvance;      ///< Distance to advance cursor (x axis)
