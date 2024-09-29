@@ -1,4 +1,4 @@
-(function(){
+(function () {
 function responsive2CSV() {
    let srcNode = document.body;
    let els = [];
@@ -136,8 +136,8 @@ function saveForm() {
          case "radio":
             if (el.checked)
                values[el.name] = el.value;
-            else  if(values[el.name] === undefined)
-            values[el.name] = false;
+            else if (values[el.name] === undefined)
+               values[el.name] = false;
             break;
          case 'select-one': values[el.name] = el.selectedIndex < 0 ? -1 : el.options[el.selectedIndex].value; break;
          case 'select-multiple': values[el.name] = [];
@@ -159,20 +159,20 @@ function saveForm() {
    let data = JSON.stringify(values);
    let link = location.href.split('/').pop();
    link = link.replace(/\.\S+$/g, "")
-   link = "<a href onclick=opener.saveChanged(this) download='" + link + ".json" + "'>Download form data as JSON</a>" +
-      " | <a href onclick=opener.saveChangedCSV(this) download='" + link + ".csv" + "'>Responsive data as CSV</a>";
+   link = "<a href onclick=saveChanged(this) download='" + link + ".json" + "'>Download form data as JSON</a>" +
+      " | <a href onclick=saveChangedCSV(this) download='" + link + ".csv" + "'>Responsive data as CSV</a>";
    let resp = responsive2CSV();
-   w.document.write(link + "<textarea style='width:100%;height:calc("+(resp?"50% - 10px)'>":"100% - 17px)'>") + data + "</textarea>" +
-      (resp?"<textarea style='width:100%;height:calc(50% - 10px)'>" + resp + "</textarea>":""));
+   w.document.write(link + "<textarea style='width:100%;height:calc(" + (resp ? "50% - 10px)'>" : "100% - 17px)'>") + data + "</textarea>" +
+      (resp ? "<textarea style='width:100%;height:calc(50% - 10px)'>" + resp + "</textarea>" : ""));
    w.document.close();
+   w.saveChanged = saveChanged;
+   w.saveChangedCSV = saveChangedCSV;
 }
-function saveChanged(t)
-{
+function saveChanged(t) {
    let data = t.parentElement.getElementsByTagName("TEXTAREA")[0].value;
    t.href = "data:application/json;charset=utf-8," + encodeURIComponent(data);
 }
-function saveChangedCSV(t)
-{
+function saveChangedCSV(t) {
    let data = t.parentElement.getElementsByTagName("TEXTAREA")[1].value;
    t.href = "data:application/json;charset=utf-8," + encodeURIComponent(data);
 }
