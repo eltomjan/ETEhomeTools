@@ -13,18 +13,20 @@ namespace Teletext
         public Form1()
         {
             InitializeComponent();
+            textBox1_TextChanged(textBox1, new EventArgs());
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
-            string pg = ((System.Windows.Forms.TextBox)sender).Text;
+            string pg = ((System.Windows.Forms.TextBox)sender).Text.ToUpper();
             string ocr = string.Empty;
             if (pg.Length >= 3)
             {
                 using (WebClient client = new WebClient())
                 {
-                    ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-                    Stream stream = client.OpenRead("https://www.ceskatelevize.cz/services-old/teletext/picture.php?channel=CT2&page=" + pg);
+                    ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
+
+                    Stream stream = client.OpenRead("https://api-teletext.ceskatelevize.cz/services-old/teletext/picture.php?channel=CT2&page=" + pg);
                     Bitmap bitmap; bitmap = new Bitmap(stream);
 
                     if (bitmap != null)
@@ -49,7 +51,7 @@ namespace Teletext
                                         }
                                         else
                                         {
-                                            box += (c != first) ? "1" : " ";
+                                            box += (c != first) ? "█" : " ";
                                         }
 
                                     }
