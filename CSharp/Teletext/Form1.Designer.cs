@@ -58,7 +58,7 @@
             this.Controls.Add(this.richTextBox1);
             this.Controls.Add(this.textBox1);
             this.Name = "Form1";
-            this.Text = "Teletext ČT2";
+            this.Text = "Teletext";
             this.ResumeLayout(false);
             this.PerformLayout();
 
